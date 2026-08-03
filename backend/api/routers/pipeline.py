@@ -11,9 +11,11 @@ import sys
 import threading
 import time
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from api.schemas import PipelineStatus, StageStatusItem
+from backend.auth.admin_auth import get_current_admin
+from backend.services import dashboard_service
 from backend.utils.config import PROJECT_ROOT
 from backend.utils import pipeline_state
 from backend.utils.logger import get_logger
@@ -21,6 +23,8 @@ from backend.utils.logger import get_logger
 logger = get_logger("efl_indexdb.api.pipeline")
 
 router = APIRouter(tags=["pipeline"])
+# Dashboard routes live in this module (Prompt 3-D) — mounted at /api/dashboard
+dashboard_router = APIRouter(tags=["dashboard"])
 
 STAGE_MODULES: dict[str, str] = {
     "Discover": "backend.pipeline.stage_01_discover",
@@ -149,7 +153,10 @@ def get_status() -> PipelineStatus:
 
 
 @router.post("/run/{stage_name}")
-def run_stage(stage_name: str) -> dict:
+def run_stage(
+    stage_name: str,
+    _admin: str = Depends(get_current_admin),
+) -> dict:
     stage = _normalize_stage_name(stage_name)
     statuses = pipeline_state.get_all_statuses()
     if statuses[stage]["status"] == pipeline_state.STATUS_COMPLETE:
@@ -167,20 +174,26 @@ def run_stage(stage_name: str) -> dict:
 
 
 @router.post("/reset/{stage_name}")
-def reset_stage(stage_name: str) -> dict:
+def reset_stage(
+    stage_name: str,
+    _admin: str = Depends(get_current_admin),
+) -> dict:
     stage = _normalize_stage_name(stage_name)
     pipeline_state.reset_stage(stage)
     return {"message": f"Stage '{stage}' reset to PENDING", "stage": stage}
 
 
 @router.post("/reset-all")
-def reset_all() -> dict:
+def reset_all(_admin: str = Depends(get_current_admin)) -> dict:
     pipeline_state.reset_all()
     return {"message": "All stages reset to PENDING"}
 
 
 @router.post("/run-all")
-def run_all(background_tasks: BackgroundTasks) -> dict:
+def run_all(
+    background_tasks: BackgroundTasks,
+    _admin: str = Depends(get_current_admin),
+) -> dict:
     global _run_all_active
     with _run_all_lock:
         if _run_all_active:
@@ -194,3 +207,13 @@ def run_all(background_tasks: BackgroundTasks) -> dict:
         "message": "Full pipeline run started",
         "stages": list(pipeline_state.STAGES_IN_ORDER),
     }
+
+
+@dashboard_router.get("/summary")
+def dashboard_summary() -> dict:
+    """
+    Single Dashboard payload (poll every ~5s + websocket refresh).
+
+    Aggregates pipeline state, metadata counts, EDA/train/eval JSON, analytics.
+    """
+    return dashboard_service.build_dashboard_summary()

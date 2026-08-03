@@ -131,6 +131,36 @@ class MetadataStore:
         logger.info("MetadataStore linked %s resources to FAISS indices", len(payload))
         return len(payload)
 
+    def link_faiss(self, resource_id: str, faiss_index: int) -> None:
+        """Set FAISS linkage for a single resource without clearing others."""
+        with self._connect() as conn:
+            cols = {row[1] for row in conn.execute("PRAGMA table_info(resources)")}
+            if "faiss_index" not in cols:
+                conn.execute("ALTER TABLE resources ADD COLUMN faiss_index INTEGER")
+            if "in_faiss_index" not in cols:
+                conn.execute(
+                    "ALTER TABLE resources ADD COLUMN in_faiss_index INTEGER DEFAULT 0"
+                )
+            conn.execute(
+                "UPDATE resources SET faiss_index = ?, in_faiss_index = 1 "
+                "WHERE resource_id = ?",
+                (int(faiss_index), str(resource_id)),
+            )
+            conn.commit()
+
+    def delete(self, resource_id: str) -> bool:
+        """Remove a resource row from metadata. Returns True if a row was deleted."""
+        with self._connect() as conn:
+            cur = conn.execute(
+                "DELETE FROM resources WHERE resource_id = ?",
+                (str(resource_id),),
+            )
+            conn.commit()
+            deleted = cur.rowcount > 0
+        if deleted:
+            logger.info("MetadataStore deleted resource_id=%s", resource_id)
+        return deleted
+
     def count(self) -> int:
         with self._connect() as conn:
             row = conn.execute("SELECT COUNT(*) AS n FROM resources").fetchone()
@@ -149,6 +179,69 @@ class MetadataStore:
         with self._connect() as conn:
             rows = conn.execute(sql, list(resource_ids)).fetchall()
         return {str(r["resource_id"]): dict(r) for r in rows}
+
+    def get_one(self, resource_id: str) -> dict[str, Any] | None:
+        rows = self.get_by_ids([resource_id])
+        return rows.get(str(resource_id))
+
+    def list_resources(
+        self,
+        *,
+        cefr_level: str | None = None,
+        skill_type: str | None = None,
+        topic_domain: str | None = None,
+        source_name: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+        sort: str = "title_asc",
+    ) -> tuple[list[dict[str, Any]], int]:
+        """Paginated browse query. Returns ``(rows, total)``."""
+        page = max(1, int(page))
+        page_size = max(1, min(int(page_size), 100))
+        where: list[str] = []
+        params: list[Any] = []
+        if cefr_level:
+            where.append("cefr_level = ?")
+            params.append(cefr_level)
+        if skill_type:
+            where.append("skill_type = ?")
+            params.append(skill_type)
+        if topic_domain:
+            where.append("topic_domain = ?")
+            params.append(topic_domain)
+        if source_name:
+            where.append("source_name = ? COLLATE NOCASE")
+            params.append(source_name)
+
+        where_sql = (" WHERE " + " AND ".join(where)) if where else ""
+        sort_map = {
+            "title_asc": "title COLLATE NOCASE ASC",
+            "title_desc": "title COLLATE NOCASE DESC",
+            "cefr_asc": "cefr_level ASC, title COLLATE NOCASE ASC",
+            "cefr_desc": "cefr_level DESC, title COLLATE NOCASE ASC",
+            "source_asc": "source_name COLLATE NOCASE ASC, title COLLATE NOCASE ASC",
+        }
+        order_sql = sort_map.get(sort, sort_map["title_asc"])
+        offset = (page - 1) * page_size
+
+        with self._connect() as conn:
+            total_row = conn.execute(
+                f"SELECT COUNT(*) AS n FROM resources{where_sql}",
+                params,
+            ).fetchone()
+            total = int(total_row["n"] if total_row else 0)
+            rows = conn.execute(
+                f"""
+                SELECT resource_id, title, raw_text, cefr_level, skill_type,
+                       topic_domain, source_name, source_url
+                FROM resources
+                {where_sql}
+                ORDER BY {order_sql}
+                LIMIT ? OFFSET ?
+                """,
+                [*params, page_size, offset],
+            ).fetchall()
+        return [dict(r) for r in rows], total
 
     def suggest_titles(self, partial: str, limit: int = 5) -> list[str]:
         q = (partial or "").strip()

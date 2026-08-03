@@ -77,13 +77,14 @@ app.add_middleware(
 
 app.include_router(search.router, prefix="/api/search")
 app.include_router(pipeline.router, prefix="/api/pipeline")
+app.include_router(pipeline.dashboard_router, prefix="/api/dashboard")
 app.include_router(metrics.router, prefix="/api/metrics")
 app.include_router(explain.router, prefix="/api/explain")
 app.include_router(qa.router, prefix="/api/qa")
 app.include_router(recommend.router, prefix="/api/recommend")
 app.include_router(analyzer.router, prefix="/api/analyzer")
 app.include_router(analytics.router, prefix="/api/analytics")
-app.include_router(duplicates.router, prefix="/api/duplicates")
+app.include_router(duplicates.router, prefix="/api")
 app.include_router(admin.router, prefix="/api/admin")
 app.include_router(resources.router, prefix="/api/resources")
 app.include_router(ws_router)
@@ -98,3 +99,21 @@ def health() -> dict:
         "status": "ok",
         "pipeline_ready": bool(pipeline_state.is_pipeline_ready()),
     }
+
+
+@app.api_route("/login", methods=["GET", "POST"])
+def login_placeholder() -> dict:
+    """
+    Silence Material Dashboard template hits to /login until Admin auth (later).
+    Returns 200 JSON instead of a noisy 404 in the uvicorn log.
+    """
+    return {
+        "status": "auth_not_configured",
+        "detail": "Admin auth is not wired yet. Use the API endpoints directly.",
+    }
+
+
+@app.get("/.well-known/appspecific/com.chrome.devtools.json")
+def chrome_devtools_placeholder() -> dict:
+    """Chrome DevTools probe — empty OK to avoid 404 noise."""
+    return {}

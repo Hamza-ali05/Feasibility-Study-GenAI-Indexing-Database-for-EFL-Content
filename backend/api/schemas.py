@@ -78,3 +78,17 @@ class ResourceOut(BaseModel):
     source_name: str | None = None
     source_url: str | None = None
     raw_text_preview: str
+
+
+class ResourceListResponse(BaseModel):
+    items: list[ResourceOut]
+    total: int
+    page: int
+    page_size: int
+
+
+class ResourceDetail(ResourceOut):
+    """Document Preview payload — full text + related recommendations."""
+
+    raw_text_full: str
+    related: list[dict[str, Any]] = Field(default_factory=list)

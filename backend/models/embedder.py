@@ -33,7 +33,11 @@ class Embedder:
             )
             self.model = SentenceTransformer(model_name, local_files_only=False)
             logger.info("Downloaded and loaded %s", model_name)
-        self.embedding_dim = int(self.model.get_sentence_embedding_dimension())
+        # Prefer the current ST API; fall back for older package versions.
+        dim_fn = getattr(self.model, "get_embedding_dimension", None) or getattr(
+            self.model, "get_sentence_embedding_dimension", None
+        )
+        self.embedding_dim = int(dim_fn()) if dim_fn else 384
         logger.info("SentenceTransformer ready dim=%s", self.embedding_dim)
 
     def encode(

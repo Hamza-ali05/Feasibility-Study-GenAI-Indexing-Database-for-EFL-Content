@@ -132,8 +132,9 @@ def semantic_search(body: SearchQuery) -> SearchResponse:
     }
     analytics_service.log_search_query(
         query_text=body.query.strip(),
-        filters={k: v for k, v in filters_used.items() if v is not None},
+        filters={k: v for k, v in filters_used.items() if v is not None and k != "top_k"},
         result_count=len(results),
+        top_result_id=results[0].resource_id if results else None,
     )
 
     return SearchResponse(

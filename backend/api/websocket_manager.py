@@ -154,6 +154,16 @@ def broadcast_duplicate_flag(
     manager.schedule_broadcast(payload)
 
 
+def broadcast_duplicates_pending(pending_count: int) -> None:
+    """Dashboard live update after resolve / rescan."""
+    payload = {
+        "type": "duplicates_update",
+        "duplicate_candidates_pending": int(pending_count),
+        "timestamp": _utc_now(),
+    }
+    manager.schedule_broadcast(payload)
+
+
 @router.websocket("/ws/pipeline")
 async def pipeline_websocket(websocket: WebSocket) -> None:
     await manager.connect(websocket)

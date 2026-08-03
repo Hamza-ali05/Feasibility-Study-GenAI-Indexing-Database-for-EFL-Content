@@ -12,14 +12,21 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 # Load project-root .env if present (never invent keys — missing stays empty).
 load_dotenv(PROJECT_ROOT / ".env")
+# Also allow backend/.env (Prompt 3-H documents ADMIN_* there).
+load_dotenv(PROJECT_ROOT / "backend" / ".env", override=False)
 
 
 class Config:
-    """Runtime settings for live AI features (RAG, analyzer, etc.)."""
+    """Runtime settings for live AI features (RAG, analyzer, admin auth, etc.)."""
 
     ANTHROPIC_API_KEY: str | None = os.getenv("ANTHROPIC_API_KEY") or None
     # Student-project default; override with RAG_MODEL in .env if needed.
     RAG_MODEL: str = os.getenv("RAG_MODEL", "claude-sonnet-4-6")
+
+    # Single-admin Auth (Admin Panel) — set via .env; never commit real secrets.
+    ADMIN_USERNAME: str | None = os.getenv("ADMIN_USERNAME") or None
+    ADMIN_PASSWORD_HASH: str | None = os.getenv("ADMIN_PASSWORD_HASH") or None
+    JWT_SECRET: str | None = os.getenv("JWT_SECRET") or None
 
 DATA_RAW = PROJECT_ROOT / "data" / "raw"
 DATA_PROCESSED = PROJECT_ROOT / "data" / "processed"
