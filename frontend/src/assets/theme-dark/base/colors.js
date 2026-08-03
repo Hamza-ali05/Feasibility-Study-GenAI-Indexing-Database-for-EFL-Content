@@ -1,0 +1,260 @@
+/**
+=========================================================
+* Material Dashboard 2 React - v2.2.0
+=========================================================
+
+* Product Page: https://www.creative-tim.com/product/material-dashboard-react
+* Copyright 2023 Creative Tim (https://www.creative-tim.com)
+
+Coded by www.creative-tim.com
+
+ =========================================================
+
+* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+*/
+
+const colors = {
+  background: {
+    default: "#1a2035",
+    sidenav: "#1f283e",
+    card: "#202940",
+  },
+
+  text: {
+    main: "#ffffffcc",
+    secondary: "#D3D1C7",
+    focus: "#888780",
+  },
+
+  transparent: {
+    main: "transparent",
+  },
+
+  white: {
+    main: "#ffffff",
+    focus: "#ffffff",
+  },
+
+  black: {
+    light: "#000000",
+    main: "#000000",
+    focus: "#000000",
+  },
+
+  primary: {
+    main: "#3C3489",
+    focus: "#2E2870",
+  },
+
+  secondary: {
+    main: "#888780",
+    focus: "#D3D1C7",
+  },
+
+  info: {
+    main: "#1A73E8",
+    focus: "#1662C4",
+  },
+
+  success: {
+    main: "#0F6E56",
+    focus: "#0A5744",
+  },
+
+  warning: {
+    main: "#EF9F27",
+    focus: "#D4891A",
+  },
+
+  error: {
+    main: "#993C1D",
+    focus: "#7A3017",
+  },
+
+  light: {
+    main: "#f0f2f566",
+    focus: "#f0f2f566",
+  },
+
+  dark: {
+    main: "#344767",
+    focus: "#2c3c58",
+  },
+
+  grey: {
+    100: "#f8f9fa",
+    200: "#f0f2f5",
+    300: "#dee2e6",
+    400: "#ced4da",
+    500: "#adb5bd",
+    600: "#6c757d",
+    700: "#495057",
+    800: "#343a40",
+    900: "#212529",
+  },
+
+  gradients: {
+    primary: {
+      main: "#3C3489",
+      state: "#2E2870",
+    },
+
+    secondary: {
+      main: "#888780",
+      state: "#5F5E5A",
+    },
+
+    info: {
+      main: "#49a3f1",
+      state: "#1A73E8",
+    },
+
+    success: {
+      main: "#1A8F6E",
+      state: "#0F6E56",
+    },
+
+    warning: {
+      main: "#F5B84A",
+      state: "#EF9F27",
+    },
+
+    error: {
+      main: "#B85A3A",
+      state: "#993C1D",
+    },
+
+    light: {
+      main: "#EBEFF4",
+      state: "#CED4DA",
+    },
+
+    dark: {
+      main: "#323a54",
+      state: "#1a2035",
+    },
+  },
+
+  socialMediaColors: {
+    facebook: {
+      main: "#3b5998",
+      dark: "#344e86",
+    },
+
+    twitter: {
+      main: "#55acee",
+      dark: "#3ea1ec",
+    },
+
+    instagram: {
+      main: "#125688",
+      dark: "#0e456d",
+    },
+
+    linkedin: {
+      main: "#0077b5",
+      dark: "#00669c",
+    },
+
+    pinterest: {
+      main: "#cc2127",
+      dark: "#b21d22",
+    },
+
+    youtube: {
+      main: "#e52d27",
+      dark: "#d41f1a",
+    },
+
+    vimeo: {
+      main: "#1ab7ea",
+      dark: "#13a3d2",
+    },
+
+    slack: {
+      main: "#3aaf85",
+      dark: "#329874",
+    },
+
+    dribbble: {
+      main: "#ea4c89",
+      dark: "#e73177",
+    },
+
+    github: {
+      main: "#24292e",
+      dark: "#171a1d",
+    },
+
+    reddit: {
+      main: "#ff4500",
+      dark: "#e03d00",
+    },
+
+    tumblr: {
+      main: "#35465c",
+      dark: "#2a3749",
+    },
+  },
+
+  badgeColors: {
+    primary: {
+      background: "#EEEDFE",
+      text: "#3C3489",
+    },
+
+    secondary: {
+      background: "#F0EEE6",
+      text: "#5F5E5A",
+    },
+
+    info: {
+      background: "#aecef7",
+      text: "#095bc6",
+    },
+
+    success: {
+      background: "#EAF3EC",
+      text: "#0F6E56",
+    },
+
+    warning: {
+      background: "#FBF3E2",
+      text: "#8A4B12",
+    },
+
+    error: {
+      background: "#F6E9EC",
+      text: "#993C1D",
+    },
+
+    light: {
+      background: "#ffffff",
+      text: "#c7d3de",
+    },
+
+    dark: {
+      background: "#8097bf",
+      text: "#1e2e4a",
+    },
+  },
+
+  coloredShadows: {
+    primary: "#3C3489",
+    secondary: "#5F5E5A",
+    info: "#1A73E8",
+    success: "#0F6E56",
+    warning: "#EF9F27",
+    error: "#993C1D",
+    light: "#D3D1C7",
+    dark: "#2C2C2A",
+  },
+
+  inputBorderColor: "#D3D1C7",
+
+  tabs: {
+    indicator: { boxShadow: "#D3D1C7" },
+  },
+};
+
+export default colors;
