@@ -21,7 +21,6 @@ EVAL_REPORT = DATA_PROCESSED / "10_evaluation_report.json"
 DUP_CANDIDATES = DATA_PROCESSED / "duplicate_candidates.json"
 LAST_PREDICT = DATA_PROCESSED / "14_last_predict.json"
 
-
 def _read_json(path: Path) -> dict[str, Any] | None:
     if not path.exists():
         return None
@@ -29,10 +28,9 @@ def _read_json(path: Path) -> dict[str, Any] | None:
         with path.open("r", encoding="utf-8") as fh:
             data = json.load(fh)
         return data if isinstance(data, dict) else None
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("dashboard failed to read %s: %s", path, exc)
         return None
-
 
 def _topline_evaluation(report: dict[str, Any] | None) -> dict[str, Any] | None:
     if not report:
@@ -44,13 +42,13 @@ def _topline_evaluation(report: dict[str, Any] | None) -> dict[str, Any] | None:
     return {
         "run_at": report.get("run_at"),
         "sbert_precision_at_10": sbert_r.get("precision_at_10"),
+        "sbert_recall_at_10": sbert_r.get("recall_at_10"),
         "sbert_map": sbert_r.get("map"),
         "sbert_f1_macro": sbert_c.get("f1_macro"),
         "sbert_accuracy": sbert_c.get("accuracy"),
         "queries_evaluated": retrieval.get("queries_evaluated"),
         "n_labeled_test": classification.get("n_labeled_test"),
     }
-
 
 def _pipeline_activity(limit: int = 10) -> list[dict[str, Any]]:
     """Derive recent pipeline stage events from pipeline_state run_at stamps."""
@@ -70,10 +68,9 @@ def _pipeline_activity(limit: int = 10) -> list[dict[str, Any]]:
                 "timestamp": run_at,
             }
         )
-    # Newest first
+
     events.sort(key=lambda e: str(e.get("timestamp") or ""), reverse=True)
     return events[:limit]
-
 
 def _upload_activity() -> list[dict[str, Any]]:
     """Surface last Predict artefact as a recent activity signal when present."""
@@ -88,7 +85,6 @@ def _upload_activity() -> list[dict[str, Any]]:
             "result_count": len(predict.get("results") or []),
         }
     ]
-
 
 def build_dashboard_summary() -> dict[str, Any]:
     """One-pass summary for GET /api/dashboard/summary (polled every ~5s)."""
@@ -107,7 +103,7 @@ def build_dashboard_summary() -> dict[str, Any]:
     total_resources = 0
     try:
         total_resources = MetadataStore().count()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("metadata count failed: %s", exc)
 
     faiss_ntotal = None
@@ -116,11 +112,12 @@ def build_dashboard_summary() -> dict[str, Any]:
             faiss_ntotal = int(train["faiss_ntotal"])
         except (TypeError, ValueError):
             faiss_ntotal = None
-    # Prefer live ntotal when FAISS is already warm (cheap after first load)
+
     try:
         from backend.db.vector_store import get_vector_store
 
-        faiss_ntotal = int(get_vector_store().index.ntotal)
+        idx = get_vector_store().index
+        faiss_ntotal = int(idx.ntotal) if idx is not None else 0
     except Exception:
         pass
 
@@ -133,14 +130,13 @@ def build_dashboard_summary() -> dict[str, Any]:
         from backend.services import duplicate_service
 
         dup_pending = duplicate_service.count_unresolved()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("unresolved duplicate count failed: %s", exc)
         if dups:
             candidates = dups.get("candidates")
             if isinstance(candidates, list):
                 dup_pending = len(candidates)
 
-    # Merge recent activity: searches + pipeline + predict, newest 10
     activity = (
         analytics.recent_searches(limit=10)
         + _pipeline_activity(limit=14)

@@ -21,12 +21,10 @@ router = APIRouter(tags=["analyzer"])
 
 ALLOWED_EXTENSIONS = {".txt", ".csv", ".pdf"}
 
-
 class ConfirmDuplicateBody(BaseModel):
     text: str
     title: str | None = None
     force: bool = Field(default=True)
-
 
 class AnalyzerResult(BaseModel):
     resource_id: str | None = None
@@ -42,7 +40,6 @@ class AnalyzerResult(BaseModel):
     note: str | None = None
     faiss_index: int | None = None
 
-
 def _require_train_complete() -> None:
     state = pipeline_state.get_all_statuses()
     train = state.get("Train") or {}
@@ -54,7 +51,6 @@ def _require_train_complete() -> None:
                 "FAISS index exists before using the AI Resource Analyzer."
             ),
         )
-
 
 def _extract_text_from_upload(filename: str, raw: bytes) -> str:
     lower = (filename or "").lower()
@@ -84,7 +80,6 @@ def _extract_text_from_upload(filename: str, raw: bytes) -> str:
         f"Unsupported file type for '{filename}'. Allowed: {sorted(ALLOWED_EXTENSIONS)}"
     )
 
-
 def _run_analyze(
     text: str,
     *,
@@ -103,14 +98,12 @@ def _run_analyze(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.exception("analyzer failed")
         raise HTTPException(status_code=500, detail=f"Analyzer failed: {exc}") from exc
 
-
 def _to_result(result: dict[str, Any]) -> AnalyzerResult:
     return AnalyzerResult(**{k: result.get(k) for k in AnalyzerResult.model_fields})
-
 
 @router.post("/upload", response_model=AnalyzerResult)
 async def upload(request: Request) -> AnalyzerResult:
@@ -124,17 +117,22 @@ async def upload(request: Request) -> AnalyzerResult:
     filename: str | None = None
     body_text: str | None = None
     body_title: str | None = None
+    force = False
 
     if "application/json" in content_type:
         payload = await request.json()
         body_text = str(payload.get("text") or "")
         body_title = payload.get("title")
+        force = bool(payload.get("force"))
     elif "multipart/form-data" in content_type:
         form = await request.form()
         upload = form.get("file")
-        body_title = form.get("title")  # type: ignore[assignment]
+        body_title = form.get("title")
         if isinstance(body_title, bytes):
             body_title = body_title.decode("utf-8", errors="replace")
+        force_raw = form.get("force")
+        if force_raw is not None:
+            force = str(force_raw).lower() in {"1", "true", "yes"}
         form_text = form.get("text")
         if upload is not None and hasattr(upload, "filename") and upload.filename:
             filename = str(upload.filename)
@@ -172,10 +170,9 @@ async def upload(request: Request) -> AnalyzerResult:
         str(body_text),
         title=str(body_title) if body_title else None,
         filename=filename,
-        force=False,
+        force=force,
     )
     return _to_result(result)
-
 
 @router.post("/confirm-duplicate", response_model=AnalyzerResult)
 def confirm_duplicate(body: ConfirmDuplicateBody) -> AnalyzerResult:

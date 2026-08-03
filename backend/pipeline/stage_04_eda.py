@@ -13,7 +13,7 @@ from pathlib import Path
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
+import matplotlib.pyplot as plt
 import pandas as pd
 
 from backend.utils.config import DATA_PROCESSED
@@ -27,14 +27,12 @@ INPUT_PATH = DATA_PROCESSED / "03_integrated.parquet"
 REPORT_PATH = DATA_PROCESSED / "04_eda_report.json"
 PLOTS_DIR = DATA_PROCESSED / "eda_plots"
 
-# Greyish EFL IndexDB palette (theme tokens)
 BG_PAGE = "#F9F8F5"
 BORDER = "#D3D1C7"
 TEXT_MUTED = "#888780"
 ACCENT_PURPLE = "#3C3489"
 TEXT_PRIMARY = "#2C2C2A"
 
-# CEFR badge colours (same hex family as frontend theme Prompt 4-B)
 CEFR_COLORS = {
     "A1": "#1F5F3F",
     "A2": "#1F4A6E",
@@ -56,7 +54,6 @@ TOPIC_ORDER = [
     "Health",
 ]
 
-
 def _style_axes(ax: plt.Axes) -> None:
     ax.set_facecolor(BG_PAGE)
     ax.tick_params(colors=TEXT_MUTED)
@@ -66,11 +63,9 @@ def _style_axes(ax: plt.Axes) -> None:
     for spine in ax.spines.values():
         spine.set_color(BORDER)
 
-
 def _distribution(series: pd.Series, ordered: list[str]) -> dict[str, int]:
     counts = series.dropna().astype(str).value_counts()
     return {key: int(counts.get(key, 0)) for key in ordered}
-
 
 def _text_length_stats(series: pd.Series) -> dict[str, float]:
     lengths = series.fillna("").astype(str).str.len()
@@ -82,16 +77,13 @@ def _text_length_stats(series: pd.Series) -> dict[str, float]:
         "max": int(lengths.max()) if len(lengths) else 0,
     }
 
-
 def _null_rates(df: pd.DataFrame, columns: list[str]) -> dict[str, float]:
     n = len(df) or 1
     return {col: float(df[col].isna().sum() / n) for col in columns}
 
-
 def _top_sources(series: pd.Series, n: int = 10) -> list[dict]:
     counts = series.fillna("(unknown)").astype(str).value_counts().head(n)
     return [{"source_name": str(name), "count": int(count)} for name, count in counts.items()]
-
 
 def _plot_cefr_bar(dist: dict[str, int], path: Path) -> None:
     labels = CEFR_ORDER
@@ -108,11 +100,10 @@ def _plot_cefr_bar(dist: dict[str, int], path: Path) -> None:
     fig.savefig(path, dpi=120, facecolor=BG_PAGE)
     plt.close(fig)
 
-
 def _plot_skill_pie(dist: dict[str, int], path: Path) -> None:
     labels = [k for k in SKILL_ORDER if dist.get(k, 0) > 0]
     values = [dist[k] for k in labels]
-    # Greyish wedges + accent; no bright non-CEFR colours
+
     palette = [BORDER, TEXT_MUTED, ACCENT_PURPLE, "#B4B2A9", "#5F5E5A", "#D3D1C7"]
     colors = [palette[i % len(palette)] for i in range(len(labels))]
 
@@ -138,7 +129,6 @@ def _plot_skill_pie(dist: dict[str, int], path: Path) -> None:
     fig.savefig(path, dpi=120, facecolor=BG_PAGE)
     plt.close(fig)
 
-
 def _plot_topic_bar(dist: dict[str, int], path: Path) -> None:
     labels = TOPIC_ORDER
     values = [dist.get(k, 0) for k in labels]
@@ -154,7 +144,6 @@ def _plot_topic_bar(dist: dict[str, int], path: Path) -> None:
     fig.savefig(path, dpi=120, facecolor=BG_PAGE)
     plt.close(fig)
 
-
 def _plot_text_length_hist(lengths: pd.Series, path: Path) -> None:
     fig, ax = plt.subplots(figsize=(8, 4.5), facecolor=BG_PAGE)
     data = lengths.clip(upper=lengths.quantile(0.99)) if len(lengths) else lengths
@@ -166,7 +155,6 @@ def _plot_text_length_hist(lengths: pd.Series, path: Path) -> None:
     fig.tight_layout()
     fig.savefig(path, dpi=120, facecolor=BG_PAGE)
     plt.close(fig)
-
 
 def build_report(df: pd.DataFrame) -> dict:
     cefr_distribution = _distribution(df["cefr_level"], CEFR_ORDER)
@@ -191,7 +179,6 @@ def build_report(df: pd.DataFrame) -> dict:
         "top_sources": top_sources,
     }
 
-
 def print_summary(report: dict) -> None:
     print("\n=== EDA summary (EFL IndexDB) ===")
     print(f"total_resources: {report['total_resources']}")
@@ -205,7 +192,6 @@ def print_summary(report: dict) -> None:
         print(f"  - {item['source_name']}: {item['count']}")
     print(f"plots → {PLOTS_DIR}")
     print("=================================\n")
-
 
 def run() -> dict:
     pipeline_state.mark_running(STAGE_NAME)
@@ -247,7 +233,6 @@ def run() -> dict:
     except Exception:
         pipeline_state.mark_failed(STAGE_NAME)
         raise
-
 
 if __name__ == "__main__":
     run()

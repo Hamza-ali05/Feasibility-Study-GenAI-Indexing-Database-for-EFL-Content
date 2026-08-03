@@ -29,14 +29,13 @@ BALANCED_EMBEDDINGS = DATA_SPLITS / "train" / "balanced_embeddings.npy"
 REPORT_PATH = DATA_PROCESSED / "08_balance_report.json"
 
 IMBALANCE_RATIO_THRESHOLD = 3.0
-SMOTE_MIN_SAMPLES = 6  # SMOTE default k_neighbors=5
+SMOTE_MIN_SAMPLES = 6
 RANDOM_STATE = 42
 CEFR_ORDER = ["A1", "A2", "B1", "B2", "C1", "C2"]
 
-
 def _class_counts(labels: pd.Series) -> dict[str, int]:
     counts = labels.astype(str).value_counts()
-    # Prefer CEFR order first, then any extras
+
     ordered: dict[str, int] = {}
     for level in CEFR_ORDER:
         if level in counts.index:
@@ -46,13 +45,11 @@ def _class_counts(labels: pd.Series) -> dict[str, int]:
             ordered[str(label)] = int(count)
     return ordered
 
-
 def _imbalance_ratio(counts: dict[str, int]) -> float:
     if not counts:
         return 0.0
     values = list(counts.values())
     return float(max(values) / max(min(values), 1))
-
 
 def _align_train_and_embeddings(
     train_df: pd.DataFrame,
@@ -80,7 +77,6 @@ def _align_train_and_embeddings(
         raise RuntimeError("Failed to align train parquet with embeddings")
     return aligned_df, aligned_emb
 
-
 def _select_strategy(counts: dict[str, int]) -> str:
     if len(counts) < 2:
         return "skip_insufficient_classes"
@@ -90,7 +86,6 @@ def _select_strategy(counts: dict[str, int]) -> str:
     if any(n < SMOTE_MIN_SAMPLES for n in counts.values()):
         return "random_oversampler"
     return "smote"
-
 
 def _balance_labeled(
     X: np.ndarray,
@@ -106,14 +101,12 @@ def _balance_labeled(
     else:
         raise ValueError(f"Unknown balancing strategy: {strategy}")
 
-    # imblearn returns resampled X and y; track provenance via index feature
     index_col = np.arange(len(X), dtype=np.float32).reshape(-1, 1)
     X_aug = np.hstack([X, index_col])
     X_res, y_res = sampler.fit_resample(X_aug, y_arr)
     source_idx = np.clip(np.rint(X_res[:, -1]).astype(np.int64), 0, len(X) - 1)
     X_balanced = X_res[:, :-1].astype(np.float32, copy=False)
     return X_balanced, source_idx, pd.Series(y_res, name="cefr_level")
-
 
 def run() -> dict:
     pipeline_state.mark_running(STAGE_NAME)
@@ -170,7 +163,7 @@ def run() -> dict:
             balanced_labeled_df = labeled_df.iloc[source_idx].reset_index(drop=True)
             balanced_labeled_df = balanced_labeled_df.copy()
             balanced_labeled_df["cefr_level"] = y_res.to_numpy()
-            # Resampled rows reuse source metadata; flag repeated source indices
+
             original_n = len(labeled_df)
             seen: set[int] = set()
             synthetic_flags: list[bool] = []
@@ -190,7 +183,6 @@ def run() -> dict:
                 len(balanced_labeled_df),
             )
 
-        # Keep unlabeled rows unchanged; append after balanced labeled set
         if "is_balanced_synthetic" not in balanced_labeled_df.columns:
             balanced_labeled_df = balanced_labeled_df.copy()
             balanced_labeled_df["is_balanced_synthetic"] = False
@@ -249,7 +241,6 @@ def run() -> dict:
     except Exception:
         pipeline_state.mark_failed(STAGE_NAME)
         raise
-
 
 if __name__ == "__main__":
     run()

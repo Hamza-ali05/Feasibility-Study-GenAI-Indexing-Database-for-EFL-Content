@@ -41,11 +41,9 @@ LIME_TRAIN_CAP = 800
 TOP_N_WEIGHTS = 5
 STABILITY_SEEDS = (7, 99)
 
-
 def _require(path) -> None:
     if not path.exists():
         raise RuntimeError(f"Missing required artefact: {path}. Run prior stages first.")
-
 
 def _f1_from_confusion(cm: list[list[int]], labels: list[str]) -> dict[str, float]:
     matrix = np.asarray(cm, dtype=float)
@@ -64,7 +62,6 @@ def _f1_from_confusion(cm: list[list[int]], labels: list[str]) -> dict[str, floa
         scores[str(label)] = float(f1)
     return scores
 
-
 def _align(df: pd.DataFrame, embeddings: np.ndarray, ids: list[str]) -> tuple[pd.DataFrame, np.ndarray]:
     id_to_pos = {rid: i for i, rid in enumerate(ids)}
     keep: list[int] = []
@@ -77,14 +74,12 @@ def _align(df: pd.DataFrame, embeddings: np.ndarray, ids: list[str]) -> tuple[pd
         ordered.append(pos)
     return df.iloc[keep].reset_index(drop=True), embeddings[np.asarray(ordered, dtype=np.int64)]
 
-
 def _weight_vector(pairs: list[tuple[int, float]], dim: int) -> np.ndarray:
     vec = np.zeros(dim, dtype=np.float64)
     for feature_dim, weight in pairs:
         if 0 <= feature_dim < dim:
             vec[feature_dim] = float(weight)
     return vec
-
 
 def _lime_feature_pairs(
     explainer: LimeTabularExplainer,
@@ -117,7 +112,6 @@ def _lime_feature_pairs(
         pairs.append((dim, float(weight)))
     return pairs
 
-
 def _faithfulness(
     clf,
     embeddings_by_id: dict[str, np.ndarray],
@@ -136,7 +130,7 @@ def _faithfulness(
             continue
         original = str(clf.predict(x.reshape(1, -1))[0])
         x_flip = x.copy()
-        # Flip: negate the top influential dimension
+
         x_flip[dim] = -x_flip[dim]
         new_pred = str(clf.predict(x_flip.reshape(1, -1))[0])
         n += 1
@@ -145,7 +139,6 @@ def _faithfulness(
     if n == 0:
         return 0.0
     return float(flips / n)
-
 
 def _stability(
     clf,
@@ -180,7 +173,6 @@ def _stability(
         sims.append(sim)
     return float(np.mean(sims)) if sims else 0.0
 
-
 def _per_skill_f1(clf, test_df: pd.DataFrame, test_emb: np.ndarray) -> dict[str, float]:
     if "skill_type" not in test_df.columns:
         return {}
@@ -203,7 +195,6 @@ def _per_skill_f1(clf, test_df: pd.DataFrame, test_emb: np.ndarray) -> dict[str,
         )
     return scores
 
-
 def run() -> dict:
     pipeline_state.mark_running(STAGE_NAME)
     try:
@@ -222,14 +213,12 @@ def run() -> dict:
 
         clf = joblib.load(SBERT_MODEL_PATH)
 
-        # --- Bias from evaluation confusion matrix (CEFR) ---
         labels = eval_report.get("confusion_matrix_labels") or [
             str(c) for c in getattr(clf, "classes_", [])
         ]
         cm = eval_report.get("confusion_matrix_sbert") or []
         per_cefr_f1 = _f1_from_confusion(cm, labels) if cm else {}
 
-        # --- Load embeddings for faithfulness / stability / skill F1 ---
         for path in (TEST_PARQUET, TEST_EMBEDDINGS, TEST_IDS, TRAIN_BALANCED, TRAIN_BALANCED_EMB):
             _require(path)
 
@@ -282,7 +271,6 @@ def run() -> dict:
                 "skill_type unavailable or fully null — per_skill_f1 not computed"
             )
 
-        # Stdout bias audit table
         rows = [["CEFR", level, f"{score:.3f}", "at risk" if score < BIAS_F1_THRESHOLD else "ok"]
                 for level, score in per_cefr_f1.items()]
         rows += [["skill", skill, f"{score:.3f}", "at risk" if score < BIAS_F1_THRESHOLD else "ok"]
@@ -326,7 +314,6 @@ def run() -> dict:
     except Exception:
         pipeline_state.mark_failed(STAGE_NAME)
         raise
-
 
 if __name__ == "__main__":
     run()

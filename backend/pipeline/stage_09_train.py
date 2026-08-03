@@ -39,7 +39,6 @@ DUP_SIM_THRESHOLD = 0.97
 DUP_TOP_N = 200
 DUP_SEARCH_K = 32
 
-
 def _load_balanced() -> tuple[pd.DataFrame, np.ndarray]:
     if not BALANCED_PARQUET.exists() or not BALANCED_EMBEDDINGS.exists():
         raise RuntimeError(
@@ -53,7 +52,6 @@ def _load_balanced() -> tuple[pd.DataFrame, np.ndarray]:
             f"balanced_train rows ({len(df)}) != embeddings ({len(emb)})"
         )
     return df, emb
-
 
 def _train_classifiers(
     df: pd.DataFrame, embeddings: np.ndarray
@@ -100,12 +98,10 @@ def _train_classifiers(
     tfidf_clf = tfidf_pipe.named_steps["clf"]
     return sbert_acc, tfidf_acc, sbert_clf, tfidf_clf, vectorizer
 
-
 def _l2_normalize(embeddings: np.ndarray) -> np.ndarray:
     norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
     norms = np.maximum(norms, 1e-12)
     return (embeddings / norms).astype(np.float32)
-
 
 def _build_faiss(embeddings: np.ndarray, resource_ids: list[str]) -> tuple[faiss.Index, dict]:
     vectors = _l2_normalize(embeddings)
@@ -119,11 +115,10 @@ def _build_faiss(embeddings: np.ndarray, resource_ids: list[str]) -> tuple[faiss
         }
         for i, rid in enumerate(resource_ids)
     }
-    # Also provide resource_id → faiss row for metadata linking
+
     id_map["by_resource_id"] = {rid: i for i, rid in enumerate(resource_ids)}
     logger.info("FAISS IndexFlatIP built ntotal=%s dim=%s", index.ntotal, dim)
     return index, id_map
-
 
 def _find_duplicate_candidates(
     index: faiss.Index,
@@ -166,7 +161,6 @@ def _find_duplicate_candidates(
     )
     return candidates
 
-
 def run() -> dict:
     pipeline_state.mark_running(STAGE_NAME)
     try:
@@ -174,7 +168,6 @@ def run() -> dict:
         resource_ids = df["resource_id"].astype(str).tolist()
         logger.info("loaded balanced train n=%s dim=%s", len(df), embeddings.shape[1])
 
-        # Part A — classifiers
         sbert_acc, tfidf_acc, sbert_clf, tfidf_clf, vectorizer = _train_classifiers(
             df, embeddings
         )
@@ -184,7 +177,6 @@ def run() -> dict:
         joblib.dump(vectorizer, MODELS_DIR / "tfidf_vectorizer.joblib")
         logger.info("saved classifiers → %s", MODELS_DIR)
 
-        # Part B — FAISS
         index, id_map = _build_faiss(embeddings, resource_ids)
         DATA_EMBEDDINGS.mkdir(parents=True, exist_ok=True)
         faiss.write_index(index, str(FAISS_INDEX_PATH))
@@ -197,7 +189,6 @@ def run() -> dict:
         linked = store.set_faiss_indices(id_map["by_resource_id"])
         logger.info("metadata FAISS links updated: %s", linked)
 
-        # Part C — duplicate pre-scan
         candidates = _find_duplicate_candidates(index, embeddings, resource_ids)
         with DUP_CANDIDATES_PATH.open("w", encoding="utf-8") as fh:
             json.dump(
@@ -239,7 +230,6 @@ def run() -> dict:
     except Exception:
         pipeline_state.mark_failed(STAGE_NAME)
         raise
-
 
 if __name__ == "__main__":
     run()

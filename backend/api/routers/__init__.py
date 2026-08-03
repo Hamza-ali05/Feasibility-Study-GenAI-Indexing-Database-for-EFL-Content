@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-
 def make_stub_router(prefix: str, tag: str) -> APIRouter:
     router = APIRouter(prefix=prefix, tags=[tag])
 

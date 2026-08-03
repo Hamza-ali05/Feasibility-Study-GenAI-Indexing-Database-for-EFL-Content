@@ -17,26 +17,21 @@ MAX_TOKENS = 512
 MIN_TEXT_LEN = 20
 _WHITESPACE_RE = re.compile(r"\s+")
 
-
 def strip_html(text: str) -> str:
     soup = BeautifulSoup(text, "lxml")
     return soup.get_text(separator=" ")
 
-
 def normalise_unicode(text: str) -> str:
     return unicodedata.normalize("NFKC", text)
 
-
 def collapse_whitespace(text: str) -> str:
     return _WHITESPACE_RE.sub(" ", text).strip()
-
 
 def truncate_tokens(text: str, max_tokens: int = MAX_TOKENS) -> str:
     tokens = text.split(" ")
     if len(tokens) <= max_tokens:
         return text
     return " ".join(tokens[:max_tokens])
-
 
 def clean_text(text: str, *, max_tokens: int = MAX_TOKENS) -> tuple[str, str]:
     """
@@ -55,7 +50,6 @@ def clean_text(text: str, *, max_tokens: int = MAX_TOKENS) -> tuple[str, str]:
     full = cleaned
     truncated = truncate_tokens(full, max_tokens=max_tokens)
     return truncated, full
-
 
 def clean_dataframe(df: pd.DataFrame) -> tuple[pd.DataFrame, list[dict[str, Any]], int, int]:
     """Vectorised Clean-stage path used by ``stage_05_clean``."""

@@ -11,7 +11,6 @@ from functools import lru_cache
 from typing import Any
 
 import joblib
-import pandas as pd
 
 from backend.api.websocket_manager import broadcast_duplicate_flag, broadcast_pipeline_event
 from backend.db.metadata_store import MetadataStore
@@ -39,17 +38,14 @@ TOPIC_DOMAINS = [
 ]
 SBERT_CLF_PATH = DATA_PROCESSED / "models" / "sbert_lr_classifier.joblib"
 
-
 def _progress(status: str, progress_pct: float, **extra: Any) -> None:
     broadcast_pipeline_event(STAGE, status, progress_pct=progress_pct, **extra)
-
 
 @lru_cache(maxsize=1)
 def _get_cefr_classifier():
     if not SBERT_CLF_PATH.exists():
         return None
     return joblib.load(SBERT_CLF_PATH)
-
 
 def _derive_title(text: str, provided_title: str | None, filename: str | None) -> str:
     if provided_title and provided_title.strip():
@@ -62,7 +58,6 @@ def _derive_title(text: str, provided_title: str | None, filename: str | None) -
             return name[:120]
     snippet = " ".join(text.split())[:80]
     return snippet or "Untitled resource"
-
 
 def _classify_with_llm(text: str) -> dict[str, Any]:
     """Structured JSON classification via Anthropic (same client pattern as RAG)."""
@@ -117,7 +112,6 @@ def _classify_with_llm(text: str) -> dict[str, Any]:
         "classifier": "anthropic",
     }
 
-
 def _classify_fallback(embedding) -> dict[str, Any]:
     """CEFR via trained LR only — never invent skill/topic without LLM or user input."""
     clf = _get_cefr_classifier()
@@ -127,7 +121,7 @@ def _classify_fallback(embedding) -> dict[str, Any]:
             cefr = str(clf.predict(embedding.reshape(1, -1))[0])
             if cefr not in CEFR_LEVELS:
                 cefr = None
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning("CEFR classifier failed: %s", exc)
     return {
         "cefr_level": cefr,
@@ -140,7 +134,6 @@ def _classify_fallback(embedding) -> dict[str, Any]:
             "skill_type and topic_domain left null — set manually."
         ),
     }
-
 
 def analyze_and_index(
     text: str,
@@ -156,19 +149,10 @@ def analyze_and_index(
     """
     _progress("RUNNING", 5.0, step="start")
 
-    # 1. Clean
     _progress("RUNNING", 15.0, step="clean")
     cleaned, _full = clean_text(text)
     title = _derive_title(cleaned, provided_title, filename)
 
-    # 3 is embed — classify needs embedding for fallback, so embed before classify fallback
-    # Prompt order: clean → classify → embed → duplicate → index
-    # For LLM classify we don't need embedding first; for fallback we do.
-    # Follow prompt order: classify first (LLM), embed second; if fallback needed after
-    # embed attempt, re-classify. Cleaner: try LLM classify without embed; on miss embed
-    # then fallback.
-
-    # 2. Classify
     _progress("RUNNING", 30.0, step="classify")
     classify_manually = False
     try:
@@ -176,13 +160,12 @@ def analyze_and_index(
             labels = _classify_with_llm(cleaned)
         else:
             labels = None
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("LLM classify failed, will use CEFR fallback: %s", exc)
         labels = None
 
-    # 3. Embed
     _progress("RUNNING", 50.0, step="embed")
-    embedding = get_embedder().encode([cleaned], batch_size=1, show_progress_bar=False)[0]
+    embedding = get_embedder().embed_single(cleaned)
 
     if labels is None:
         labels = _classify_fallback(embedding)
@@ -192,7 +175,6 @@ def analyze_and_index(
     skill = labels.get("skill_type")
     topic = labels.get("topic_domain")
 
-    # 4. Near-duplicate check
     _progress("RUNNING", 70.0, step="duplicate_check")
     dup = None
     if not force:
@@ -223,28 +205,25 @@ def analyze_and_index(
                 "note": labels.get("note"),
             }
 
-    # 5. Index
     _progress("RUNNING", 85.0, step="index")
     resource_id = str(uuid.uuid4())
     store = get_vector_store()
-    faiss_idx = store.add_single(resource_id, embedding)
+    store.add_single(embedding, resource_id)
+    faiss_idx = int(store.id_to_row[resource_id])
 
     meta = MetadataStore()
-    row = pd.DataFrame(
-        [
-            {
-                "resource_id": resource_id,
-                "title": title,
-                "raw_text": cleaned,
-                "cefr_level": cefr,
-                "skill_type": skill,
-                "topic_domain": topic,
-                "source_name": filename or "analyzer_upload",
-                "source_url": None,
-            }
-        ]
+    meta.upsert_one(
+        {
+            "resource_id": resource_id,
+            "title": title,
+            "raw_text": cleaned,
+            "cefr_level": cefr,
+            "skill_type": skill,
+            "topic_domain": topic,
+            "source_name": filename or "analyzer_upload",
+            "source_url": None,
+        }
     )
-    meta.upsert_many(row)
     meta.link_faiss(resource_id, faiss_idx)
 
     _progress("COMPLETE", 100.0, step="indexed", resource_id=resource_id)

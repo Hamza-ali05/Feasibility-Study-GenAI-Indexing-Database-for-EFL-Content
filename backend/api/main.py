@@ -11,14 +11,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-# Ensure project root is importable when launched as ``uvicorn api.main:app``
-# from the backend/ directory.
 _BACKEND_DIR = Path(__file__).resolve().parents[1]
 _PROJECT_ROOT = _BACKEND_DIR.parent
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
+for _p in (_PROJECT_ROOT, _BACKEND_DIR):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 
-from api.routers import (  # noqa: E402
+from api.routers import (
     admin,
     analytics,
     analyzer,
@@ -31,17 +30,16 @@ from api.routers import (  # noqa: E402
     resources,
     search,
 )
-from api.websocket_manager import manager as ws_manager  # noqa: E402
-from api.websocket_manager import router as ws_router  # noqa: E402
-from backend.utils.config import DATA_PROCESSED  # noqa: E402
-from backend.utils import pipeline_state  # noqa: E402
+from api.websocket_manager import manager as ws_manager
+from api.websocket_manager import router as ws_router
+from backend.utils.config import DATA_PROCESSED, Config
+from backend.utils import pipeline_state
 
 app = FastAPI(
     title="EFL IndexDB API",
     version="1.0.0",
     description="Feasibility Study: GenAI Indexing Database for EFL Content",
 )
-
 
 @app.on_event("startup")
 async def _startup() -> None:
@@ -66,10 +64,9 @@ async def _startup() -> None:
 
     await asyncio.to_thread(_warm)
 
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[Config.CORS_ORIGIN],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -92,14 +89,12 @@ app.include_router(ws_router)
 DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(DATA_PROCESSED)), name="static")
 
-
 @app.get("/health")
 def health() -> dict:
     return {
         "status": "ok",
         "pipeline_ready": bool(pipeline_state.is_pipeline_ready()),
     }
-
 
 @app.api_route("/login", methods=["GET", "POST"])
 def login_placeholder() -> dict:
@@ -111,7 +106,6 @@ def login_placeholder() -> dict:
         "status": "auth_not_configured",
         "detail": "Admin auth is not wired yet. Use the API endpoints directly.",
     }
-
 
 @app.get("/.well-known/appspecific/com.chrome.devtools.json")
 def chrome_devtools_placeholder() -> dict:

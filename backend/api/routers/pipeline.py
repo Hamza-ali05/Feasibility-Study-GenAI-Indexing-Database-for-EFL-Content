@@ -6,24 +6,27 @@ Powers Pipeline Monitor: status, single-stage run, reset, run-all.
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import threading
 import time
+from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from api.schemas import PipelineStatus, StageStatusItem
 from backend.auth.admin_auth import get_current_admin
 from backend.services import dashboard_service
-from backend.utils.config import PROJECT_ROOT
+from backend.utils.config import DATA_PROCESSED, PROJECT_ROOT
 from backend.utils import pipeline_state
 from backend.utils.logger import get_logger
 
 logger = get_logger("efl_indexdb.api.pipeline")
 
 router = APIRouter(tags=["pipeline"])
-# Dashboard routes live in this module (Prompt 3-D) — mounted at /api/dashboard
+
 dashboard_router = APIRouter(tags=["dashboard"])
 
 STAGE_MODULES: dict[str, str] = {
@@ -43,7 +46,25 @@ STAGE_MODULES: dict[str, str] = {
     "Predict": "backend.pipeline.stage_14_predict",
 }
 
-# Predict needs a default query when launched via pipeline run
+ARTIFACT_FILES: dict[str, Path] = {
+    "discover": DATA_PROCESSED / "01_discover_manifest.json",
+    "load": DATA_PROCESSED / "02_load_report.json",
+    "integrate": DATA_PROCESSED / "03_integration_report.json",
+    "eda": DATA_PROCESSED / "04_eda_report.json",
+    "clean": DATA_PROCESSED / "05_clean_report.json",
+    "split": DATA_PROCESSED / "06_split_report.json",
+    "preprocess": DATA_PROCESSED / "07_preprocess_report.json",
+    "balance": DATA_PROCESSED / "08_balance_report.json",
+    "train": DATA_PROCESSED / "09_train_report.json",
+}
+
+EDA_PLOT_URLS = {
+    "cefr_bar": "/static/eda_plots/cefr_bar.png",
+    "skill_pie": "/static/eda_plots/skill_pie.png",
+    "topic_bar": "/static/eda_plots/topic_bar.png",
+    "text_length_hist": "/static/eda_plots/text_length_hist.png",
+}
+
 PREDICT_DEFAULT_ARGS = [
     "--query",
     "EFL reading comprehension practice",
@@ -57,14 +78,13 @@ STAGE_TIMEOUT_SEC = 20 * 60
 _run_all_lock = threading.Lock()
 _run_all_active = False
 
-
 def _normalize_stage_name(stage_name: str) -> str:
     """Accept URL path segments with spaces or hyphens."""
     raw = stage_name.replace("-", " ").replace("_", " ").strip()
-    # Exact match first
+
     if raw in STAGE_MODULES:
         return raw
-    # Case-insensitive match
+
     lower_map = {k.lower(): k for k in STAGE_MODULES}
     if raw.lower() in lower_map:
         return lower_map[raw.lower()]
@@ -76,14 +96,13 @@ def _normalize_stage_name(stage_name: str) -> str:
         ),
     )
 
-
 def _spawn_stage(stage: str) -> subprocess.Popen:
     module = STAGE_MODULES[stage]
     cmd = [sys.executable, "-m", module]
     if stage == "Predict":
         cmd.extend(PREDICT_DEFAULT_ARGS)
     logger.info("starting stage subprocess: %s", " ".join(cmd))
-    # Mark RUNNING immediately so UI updates before the child process does
+
     pipeline_state.set_stage_status(stage, pipeline_state.STATUS_RUNNING, progress_pct=0.0)
     return subprocess.Popen(
         cmd,
@@ -91,7 +110,6 @@ def _spawn_stage(stage: str) -> subprocess.Popen:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-
 
 def _wait_for_terminal(stage: str, timeout: float = STAGE_TIMEOUT_SEC) -> str:
     """Poll until COMPLETE or FAILED (or timeout → FAILED)."""
@@ -110,7 +128,6 @@ def _wait_for_terminal(stage: str, timeout: float = STAGE_TIMEOUT_SEC) -> str:
         error=f"Timed out after {int(timeout)}s waiting for stage to finish",
     )
     return pipeline_state.STATUS_FAILED
-
 
 def _run_all_worker() -> None:
     global _run_all_active
@@ -132,7 +149,6 @@ def _run_all_worker() -> None:
         with _run_all_lock:
             _run_all_active = False
 
-
 @router.get("/status", response_model=PipelineStatus)
 def get_status() -> PipelineStatus:
     statuses = pipeline_state.get_all_statuses()
@@ -142,6 +158,7 @@ def get_status() -> PipelineStatus:
             status=statuses[name]["status"],
             run_at=statuses[name].get("run_at"),
             progress_pct=statuses[name].get("progress_pct"),
+            error=statuses[name].get("error"),
         )
         for name in pipeline_state.STAGES_IN_ORDER
     ]
@@ -151,6 +168,56 @@ def get_status() -> PipelineStatus:
         pipeline_ready=pipeline_state.is_pipeline_ready(),
     )
 
+def _read_artifact_json(slug: str) -> dict[str, Any]:
+    path = ARTIFACT_FILES.get(slug)
+    if path is None:
+        raise HTTPException(status_code=404, detail=f"Unknown artifact '{slug}'")
+    if not path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"Artifact {path.name} not found. "
+                f"Run the corresponding pipeline stage first."
+            ),
+        )
+    try:
+        with path.open("r", encoding="utf-8") as fh:
+            data = json.load(fh)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to read {path.name}: {exc}",
+        ) from exc
+    if not isinstance(data, dict):
+        return {"data": data}
+    return data
+
+@router.get("/artifact/{slug}")
+def get_pipeline_artifact(slug: str) -> dict[str, Any]:
+    """
+    Prompt 4-N — thin JSON readers for Pipeline Monitor stage pages.
+
+    Supported slugs: discover, load, integrate, eda, clean, split,
+    preprocess, balance, train.
+
+    Evaluate → use GET /api/metrics; Explain* → GET /api/explain/*.
+    """
+    raw = (slug or "").strip().lower().replace("_", "-")
+    if raw not in ARTIFACT_FILES:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"Unknown artifact '{slug}'. "
+                f"Valid: {sorted(ARTIFACT_FILES.keys())}"
+            ),
+        )
+    payload = _read_artifact_json(raw)
+    if raw == "eda":
+        payload = {
+            **payload,
+            "plot_urls": EDA_PLOT_URLS,
+        }
+    return payload
 
 @router.post("/run/{stage_name}")
 def run_stage(
@@ -172,7 +239,6 @@ def run_stage(
     _spawn_stage(stage)
     return {"message": f"Stage '{stage}' started", "stage": stage}
 
-
 @router.post("/reset/{stage_name}")
 def reset_stage(
     stage_name: str,
@@ -182,12 +248,10 @@ def reset_stage(
     pipeline_state.reset_stage(stage)
     return {"message": f"Stage '{stage}' reset to PENDING", "stage": stage}
 
-
 @router.post("/reset-all")
 def reset_all(_admin: str = Depends(get_current_admin)) -> dict:
     pipeline_state.reset_all()
     return {"message": "All stages reset to PENDING"}
-
 
 @router.post("/run-all")
 def run_all(
@@ -207,7 +271,6 @@ def run_all(
         "message": "Full pipeline run started",
         "stages": list(pipeline_state.STAGES_IN_ORDER),
     }
-
 
 @dashboard_router.get("/summary")
 def dashboard_summary() -> dict:

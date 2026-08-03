@@ -10,7 +10,6 @@ from backend.utils.logger import get_logger
 
 logger = get_logger("efl_indexdb.resource_admin")
 
-
 def delete_indexed_resource(resource_id: str) -> dict:
     """
     Remove a resource from metadata and soft-delete it in FAISS (tombstone).
@@ -22,7 +21,7 @@ def delete_indexed_resource(resource_id: str) -> dict:
         raise HTTPException(status_code=422, detail="resource_id is required")
 
     store = MetadataStore()
-    if store.get_one(rid) is None:
+    if store.get_by_id(rid) is None:
         raise HTTPException(status_code=404, detail=f"Resource not found: {rid}")
 
     try:

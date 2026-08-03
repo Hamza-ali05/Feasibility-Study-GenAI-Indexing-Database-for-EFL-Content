@@ -18,20 +18,16 @@ logger = get_logger("efl_indexdb.api.admin")
 
 router = APIRouter(tags=["admin"])
 
-
 class LoginBody(BaseModel):
     username: str = Field(..., min_length=1)
     password: str = Field(..., min_length=1)
-
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
-
 class MeResponse(BaseModel):
     username: str
-
 
 @router.post("/login", response_model=TokenResponse)
 def login(body: LoginBody) -> TokenResponse:
@@ -60,12 +56,10 @@ def login(body: LoginBody) -> TokenResponse:
     logger.info("admin login ok user=%s", body.username)
     return TokenResponse(access_token=token, token_type="bearer")
 
-
 @router.get("/me", response_model=MeResponse)
 def me(username: str = Depends(get_current_admin)) -> MeResponse:
     """Frontend session check — returns username when Bearer JWT is valid."""
     return MeResponse(username=username)
-
 
 @router.get("/overview")
 def overview(_admin: str = Depends(get_current_admin)) -> dict:
@@ -74,7 +68,7 @@ def overview(_admin: str = Depends(get_current_admin)) -> dict:
     total_searches = AnalyticsStore().total_searches()
     try:
         dup_pending = duplicate_service.count_unresolved()
-    except Exception:  # noqa: BLE001
+    except Exception:
         dup_pending = summary.get("duplicate_candidates_pending", 0)
     return {
         **summary,
@@ -82,7 +76,6 @@ def overview(_admin: str = Depends(get_current_admin)) -> dict:
         "total_searches": total_searches,
         "admin_user": _admin,
     }
-
 
 @router.post("/pipeline/run/{stage_name}")
 def admin_run_stage(
@@ -92,14 +85,12 @@ def admin_run_stage(
     """Protected wrapper — same logic as ``POST /api/pipeline/run/{stage}``."""
     return pipeline_mod.run_stage(stage_name, _admin=_admin)
 
-
 @router.post("/pipeline/run-all")
 def admin_run_all(
     background_tasks: BackgroundTasks,
     _admin: str = Depends(get_current_admin),
 ) -> dict:
     return pipeline_mod.run_all(background_tasks, _admin=_admin)
-
 
 @router.post("/pipeline/reset/{stage_name}")
 def admin_reset_stage(
@@ -108,7 +99,6 @@ def admin_reset_stage(
 ) -> dict:
     return pipeline_mod.reset_stage(stage_name, _admin=_admin)
 
-
 @router.delete("/resources/{resource_id}")
 def admin_delete_resource(
     resource_id: str,
@@ -116,7 +106,6 @@ def admin_delete_resource(
 ) -> dict:
     """Same deletion path as ``DELETE /api/resources/{id}``."""
     return resource_admin.delete_indexed_resource(resource_id)
-
 
 @router.get("/logs")
 def admin_logs(

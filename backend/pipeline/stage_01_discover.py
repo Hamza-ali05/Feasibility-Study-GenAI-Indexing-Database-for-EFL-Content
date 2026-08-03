@@ -28,7 +28,6 @@ STAGE_NAME = "Discover"
 MANIFEST_PATH = DATA_PROCESSED / "01_discover_manifest.json"
 SAMPLE_BYTES = 65_536
 
-
 def _is_raw_empty(raw_dir: Path) -> bool:
     if not raw_dir.exists():
         return True
@@ -39,7 +38,6 @@ def _is_raw_empty(raw_dir: Path) -> bool:
             continue
         return False
     return True
-
 
 def _detect_encoding(path: Path) -> str:
     try:
@@ -53,7 +51,6 @@ def _detect_encoding(path: Path) -> str:
     except OSError:
         return "unknown"
 
-
 def _estimate_rows(path: Path, ext: str) -> int | None:
     if ext == ".pdf":
         return None
@@ -64,7 +61,6 @@ def _estimate_rows(path: Path, ext: str) -> int | None:
             return sum(1 for _ in fh)
     except OSError:
         return None
-
 
 def discover_files(raw_dir: Path | None = None) -> list[dict]:
     root = raw_dir or DATA_RAW
@@ -116,7 +112,6 @@ def discover_files(raw_dir: Path | None = None) -> list[dict]:
         )
     return files
 
-
 def print_summary(files: list[dict]) -> None:
     table = [
         [
@@ -136,7 +131,6 @@ def print_summary(files: list[dict]) -> None:
         )
     )
     print(f"\nTotal files discovered: {len(files)}")
-
 
 def run() -> dict:
     pipeline_state.mark_running(STAGE_NAME)
@@ -158,7 +152,6 @@ def run() -> dict:
     except Exception:
         pipeline_state.mark_failed(STAGE_NAME)
         raise
-
 
 if __name__ == "__main__":
     run()

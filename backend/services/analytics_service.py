@@ -6,7 +6,6 @@ from typing import Any
 
 from backend.db.analytics_store import AnalyticsStore
 
-
 def log_search_query(
     query_text: str,
     filters: dict[str, Any] | None,
@@ -33,7 +32,6 @@ def log_search_query(
     except Exception:
         pass
     return event_id
-
 
 def log_resource_view(
     resource_id: str,

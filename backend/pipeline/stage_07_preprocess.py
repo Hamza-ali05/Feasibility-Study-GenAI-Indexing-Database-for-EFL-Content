@@ -32,7 +32,6 @@ VAL_PARQUET = DATA_SPLITS / "val" / "val.parquet"
 TEST_PARQUET = DATA_SPLITS / "test" / "test.parquet"
 REPORT_PATH = DATA_PROCESSED / "07_preprocess_report.json"
 
-
 def _embed_split(
     df: pd.DataFrame,
     *,
@@ -75,12 +74,10 @@ def _embed_split(
     embeddings = np.vstack(chunks).astype(np.float32, copy=False)
     return embeddings, ids
 
-
 def _count_batches(n_rows: int) -> int:
     if n_rows <= 0:
         return 0
     return (n_rows + BATCH_SIZE - 1) // BATCH_SIZE
-
 
 def run() -> dict:
     pipeline_state.mark_running(STAGE_NAME)
@@ -190,7 +187,6 @@ def run() -> dict:
     except Exception:
         pipeline_state.mark_failed(STAGE_NAME)
         raise
-
 
 if __name__ == "__main__":
     run()

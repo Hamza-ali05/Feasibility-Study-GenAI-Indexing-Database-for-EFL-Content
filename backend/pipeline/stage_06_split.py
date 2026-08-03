@@ -32,12 +32,10 @@ TEST_SIZE = 0.15
 CEFR_ORDER = ["A1", "A2", "B1", "B2", "C1", "C2"]
 MISSING_LABEL = "_MISSING_"
 
-
 def _cefr_null_rate(df: pd.DataFrame) -> float:
     if "cefr_level" not in df.columns or len(df) == 0:
         return 1.0
     return float(df["cefr_level"].isna().mean())
-
 
 def _choose_stratify_column(df: pd.DataFrame) -> str:
     null_rate = _cefr_null_rate(df)
@@ -53,12 +51,10 @@ def _choose_stratify_column(df: pd.DataFrame) -> str:
     )
     return "cefr_level"
 
-
 def _stratify_labels(df: pd.DataFrame, column: str) -> pd.Series:
     if column not in df.columns:
         return pd.Series([MISSING_LABEL] * len(df), index=df.index, dtype="object")
     return df[column].fillna(MISSING_LABEL).astype(str)
-
 
 def _cefr_distribution(df: pd.DataFrame) -> dict[str, int]:
     if "cefr_level" not in df.columns:
@@ -66,12 +62,10 @@ def _cefr_distribution(df: pd.DataFrame) -> dict[str, int]:
     counts = df["cefr_level"].dropna().astype(str).value_counts()
     return {k: int(counts.get(k, 0)) for k in CEFR_ORDER}
 
-
 def _split(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, str]:
     strat_col = _choose_stratify_column(df)
     labels = _stratify_labels(df, strat_col)
 
-    # Relative split of the 30% holdout into equal val/test → 15% / 15% overall
     val_share_of_holdout = VAL_SIZE / (VAL_SIZE + TEST_SIZE)
 
     try:
@@ -116,7 +110,6 @@ def _split(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, 
         test_df.reset_index(drop=True),
         strat_col,
     )
-
 
 def run() -> dict:
     pipeline_state.mark_running(STAGE_NAME)
@@ -177,7 +170,6 @@ def run() -> dict:
     except Exception:
         pipeline_state.mark_failed(STAGE_NAME)
         raise
-
 
 if __name__ == "__main__":
     run()

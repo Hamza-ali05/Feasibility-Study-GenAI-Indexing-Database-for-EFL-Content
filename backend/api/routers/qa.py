@@ -20,24 +20,21 @@ logger = get_logger("efl_indexdb.api.qa")
 
 router = APIRouter(tags=["qa"])
 
-
 class QAAskRequest(BaseModel):
     question: str
     top_k: int = Field(default=5, ge=1, le=20)
-
 
 class QASource(BaseModel):
     resource_id: str
     title: str
     text_snippet: str
     similarity_score: float
-
+    cefr_level: str | None = None
 
 class QAAskResponse(BaseModel):
     answer: str
     sources: list[QASource]
     model: str
-
 
 def _require_predict_complete() -> None:
     if not pipeline_state.is_pipeline_ready():
@@ -45,7 +42,6 @@ def _require_predict_complete() -> None:
             status_code=503,
             detail="Stage Predict is not COMPLETE. Run the pipeline through Predict first.",
         )
-
 
 @router.post("/ask", response_model=QAAskResponse)
 def ask(body: QAAskRequest) -> QAAskResponse:
@@ -61,11 +57,14 @@ def ask(body: QAAskRequest) -> QAAskResponse:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except ValueError as exc:
         detail = str(exc)
-        # Billing / auth — clear client status; never fabricate an answer
+
         if "credit balance" in detail.lower():
             raise HTTPException(status_code=402, detail=detail) from exc
+
+        if "ANTHROPIC_API_KEY" in detail:
+            raise HTTPException(status_code=400, detail=detail) from exc
         raise HTTPException(status_code=503, detail=detail) from exc
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.exception("RAG ask failed")
         raise HTTPException(status_code=502, detail=f"LLM request failed: {exc}") from exc
 
@@ -74,7 +73,6 @@ def ask(body: QAAskRequest) -> QAAskResponse:
         sources=[QASource(**s) for s in result["sources"]],
         model=result["model"],
     )
-
 
 @router.get("/ask-stream")
 async def ask_stream(
@@ -94,7 +92,7 @@ async def ask_stream(
         raise HTTPException(status_code=422, detail="question must be a non-empty string")
 
     try:
-        # Sources are fully known after retrieval — send before streaming tokens.
+
         contexts = rag_service.retrieve_context(q, top_k=top_k)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -107,12 +105,13 @@ async def ask_stream(
             "title": c["title"],
             "text_snippet": c["text_snippet"],
             "similarity_score": c["similarity_score"],
+            "cefr_level": c.get("cefr_level"),
         }
         for c in contexts
     ]
 
     async def event_generator():
-        # Prompt 3-A: sources event before the generated answer stream.
+
         yield {
             "event": "message",
             "data": json.dumps({"type": "done", "sources": sources_payload}),
@@ -132,7 +131,7 @@ async def ask_stream(
                 "event": "message",
                 "data": json.dumps({"type": "error", "detail": str(exc)}),
             }
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.exception("RAG stream failed")
             yield {
                 "event": "message",

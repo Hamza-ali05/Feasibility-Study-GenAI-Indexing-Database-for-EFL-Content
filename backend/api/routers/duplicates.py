@@ -15,15 +15,12 @@ from backend.utils.logger import get_logger
 
 logger = get_logger("efl_indexdb.api.duplicates")
 
-# Mounted in main at prefix="/api" so paths are /api/duplicates, …
 router = APIRouter(tags=["duplicates"])
-
 
 class ResolveBody(BaseModel):
     resource_id_a: str
     resource_id_b: str
     action: str = Field(..., pattern="^(kept_both|merged|deleted_b)$")
-
 
 @router.get("/duplicates")
 @router.get("/duplicates/")
@@ -38,7 +35,6 @@ def list_duplicates(
         "duplicates": enriched,
     }
 
-
 @router.post("/duplicates/resolve")
 def resolve_duplicate(body: ResolveBody) -> dict:
     a = body.resource_id_a.strip()
@@ -47,7 +43,7 @@ def resolve_duplicate(body: ResolveBody) -> dict:
         raise HTTPException(status_code=422, detail="resource_id_a and resource_id_b required")
 
     if body.action == "deleted_b":
-        # Soft-remove from FAISS (IndexFlatIP cannot delete in-place — tombstone)
+
         try:
             store = get_vector_store()
             store.tombstone(b)
@@ -55,7 +51,7 @@ def resolve_duplicate(body: ResolveBody) -> dict:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         MetadataStore().delete(b)
     elif body.action == "merged":
-        # MVP: treat like kept_both for metadata; mark resolved so pair disappears.
+
         logger.info("duplicate merge recorded for %s + %s (metadata kept)", a, b)
 
     try:
@@ -72,7 +68,6 @@ def resolve_duplicate(body: ResolveBody) -> dict:
         "action": body.action,
         "duplicate_candidates_pending": pending,
     }
-
 
 @router.post("/duplicates/rescan")
 def rescan_duplicates(

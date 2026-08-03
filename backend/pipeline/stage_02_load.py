@@ -24,7 +24,6 @@ MANIFEST_PATH = DATA_PROCESSED / "01_discover_manifest.json"
 PARQUET_PATH = DATA_PROCESSED / "02_loaded.parquet"
 REPORT_PATH = DATA_PROCESSED / "02_load_report.json"
 
-
 def _load_manifest(path: Path = MANIFEST_PATH) -> list[dict]:
     if not path.exists():
         raise RuntimeError(
@@ -41,7 +40,6 @@ def _load_manifest(path: Path = MANIFEST_PATH) -> list[dict]:
         )
     return files
 
-
 def _discovery_failed(entry: dict) -> bool:
     """Skip entries that did not discover cleanly."""
     if entry.get("error") or entry.get("failed") is True:
@@ -52,13 +50,11 @@ def _discovery_failed(entry: dict) -> bool:
         return True
     return False
 
-
 def _resolve_encoding(encoding: str | None) -> str:
     if not encoding or encoding.lower() in {"unknown", "none", "ascii"}:
-        # chardet often reports "ascii" for mostly-ASCII UTF-8 files; utf-8 is safer
+
         return "utf-8"
     return encoding
-
 
 def _load_csv(path: Path, encoding: str) -> pd.DataFrame:
     candidates = [encoding]
@@ -73,7 +69,6 @@ def _load_csv(path: Path, encoding: str) -> pd.DataFrame:
             last_err = exc
             logger.info("CSV decode with %s failed for %s; trying next encoding", enc, path.name)
     raise last_err or UnicodeDecodeError("utf-8", b"", 0, 1, f"Could not decode {path}")
-
 
 def _json_dict_of_lists_to_frame(data: dict) -> pd.DataFrame:
     """Flatten {category: [items...]} vocabulary/metadata JSON into rows."""
@@ -100,7 +95,6 @@ def _json_dict_of_lists_to_frame(data: dict) -> pd.DataFrame:
         raise ValueError("JSON object produced zero rows")
     return pd.DataFrame(rows)
 
-
 def _load_json(path: Path, encoding: str) -> pd.DataFrame:
     try:
         return pd.read_json(path, orient="records", encoding=encoding)
@@ -126,16 +120,13 @@ def _load_json(path: Path, encoding: str) -> pd.DataFrame:
                 return pd.json_normalize(data)
             raise ValueError(f"Unsupported JSON structure in {path.name}: {type(data)}") from second_err
 
-
 def _load_jsonl(path: Path, encoding: str) -> pd.DataFrame:
     return pd.read_json(path, lines=True, encoding=encoding)
-
 
 def _load_txt(path: Path, encoding: str) -> pd.DataFrame:
     with path.open("r", encoding=encoding, errors="replace") as fh:
         lines = [line.rstrip("\n\r") for line in fh]
     return pd.DataFrame({"raw_text": lines})
-
 
 def _load_pdf(path: Path) -> pd.DataFrame:
     pages: list[str] = []
@@ -144,7 +135,6 @@ def _load_pdf(path: Path) -> pd.DataFrame:
             text = page.extract_text() or ""
             pages.append(text)
     return pd.DataFrame({"raw_text": pages})
-
 
 def _load_one(entry: dict) -> tuple[pd.DataFrame, dict]:
     rel = entry["path"]
@@ -183,7 +173,6 @@ def _load_one(entry: dict) -> tuple[pd.DataFrame, dict]:
     }
     return df, report
 
-
 def run() -> dict:
     pipeline_state.mark_running(STAGE_NAME)
     try:
@@ -210,7 +199,7 @@ def run() -> dict:
                 frames.append(df)
                 file_reports.append(report)
                 logger.info("loaded %s → %s rows", rel, report["rows"])
-            except Exception as exc:  # noqa: BLE001 — record per-file failure
+            except Exception as exc:
                 logger.exception("failed to load %s", rel)
                 file_reports.append(
                     {
@@ -249,7 +238,6 @@ def run() -> dict:
     except Exception:
         pipeline_state.mark_failed(STAGE_NAME)
         raise
-
 
 if __name__ == "__main__":
     run()

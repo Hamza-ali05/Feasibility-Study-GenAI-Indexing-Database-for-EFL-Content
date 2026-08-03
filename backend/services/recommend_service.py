@@ -23,12 +23,10 @@ from backend.utils.logger import get_logger
 
 logger = get_logger("efl_indexdb.recommend")
 
-# Cap how many neighbours may share the source's (cefr, skill, topic) triple
 SAME_COMBO_LIMIT = 3
-# Over-fetch so diversity filtering can still fill top_k
+
 CANDIDATE_MULTIPLIER = 12
 CANDIDATE_FLOOR = 40
-
 
 def _norm_field(value: Any) -> str | None:
     if value is None:
@@ -36,14 +34,12 @@ def _norm_field(value: Any) -> str | None:
     text = str(value).strip()
     return text or None
 
-
 def _combo_key(meta: dict[str, Any]) -> tuple[str | None, str | None, str | None]:
     return (
         _norm_field(meta.get("cefr_level")),
         _norm_field(meta.get("skill_type")),
         _norm_field(meta.get("topic_domain")),
     )
-
 
 def _build_reason(source: dict[str, Any], candidate: dict[str, Any]) -> str:
     """Templated reason from metadata overlap — no LLM call."""
@@ -84,7 +80,6 @@ def _build_reason(source: dict[str, Any], candidate: dict[str, Any]) -> str:
         return f"Same topic ({c_topic})"
     return "Semantically similar content"
 
-
 def _format_item(
     meta: dict[str, Any],
     score: float,
@@ -104,24 +99,21 @@ def _format_item(
         "reason": reason,
     }
 
-
 def _resolve_embedding(resource_id: str, meta: dict[str, Any]) -> np.ndarray:
     store = get_vector_store()
-    # Path 1 — vector already in FAISS (Train-time build)
+
     stored = store.get_embedding(resource_id)
     if stored is not None:
         logger.debug("recommend: using FAISS-stored vector for %s", resource_id)
         return stored
 
-    # Path 2 — not in original FAISS build → re-embed raw_text
     text = str(meta.get("raw_text") or "").strip()
     if not text:
         raise ValueError(
             f"Resource {resource_id} has no FAISS vector and no raw_text to re-embed"
         )
     logger.info("recommend: re-embedding %s (not in FAISS id map)", resource_id)
-    return get_embedder().encode([text], batch_size=1, show_progress_bar=False)[0]
-
+    return get_embedder().embed_single(text)
 
 def recommend_for_query(
     query_embedding: np.ndarray,
@@ -138,14 +130,19 @@ def recommend_for_query(
     k = max(1, min(int(top_k), 50))
     exclude = exclude_ids or set()
     store = get_vector_store()
-    fetch_k = min(max(k * CANDIDATE_MULTIPLIER, CANDIDATE_FLOOR), store.index.ntotal)
+    ntotal = store.index.ntotal if store.index is not None else 0
+    fetch_k = min(max(k * CANDIDATE_MULTIPLIER, CANDIDATE_FLOOR), ntotal)
     hits = store.search(query_embedding, top_k=fetch_k)
 
     meta_store = MetadataStore()
-    meta_by_id = meta_store.get_by_ids([rid for rid, _ in hits if rid not in exclude])
+    meta_by_id = meta_store.get_by_ids(
+        [str(h["id"]) for h in hits if str(h["id"]) not in exclude]
+    )
 
     out: list[dict[str, Any]] = []
-    for rid, score in hits:
+    for hit in hits:
+        rid = str(hit["id"])
+        score = float(hit["score"])
         if rid in exclude:
             continue
         meta = meta_by_id.get(rid)
@@ -155,7 +152,6 @@ def recommend_for_query(
         if len(out) >= k:
             break
     return out
-
 
 def recommend_similar(resource_id: str, top_k: int = 6) -> list[dict[str, Any]]:
     """Recommend similar indexed resources for the resource currently viewed."""
@@ -172,20 +168,23 @@ def recommend_similar(resource_id: str, top_k: int = 6) -> list[dict[str, Any]]:
 
     query_vec = _resolve_embedding(rid, source)
     store = get_vector_store()
-    # +1 so we can drop self; over-fetch for diversity backfill
+    ntotal = store.index.ntotal if store.index is not None else 0
+
     fetch_k = min(
         max((k + 1) * CANDIDATE_MULTIPLIER, CANDIDATE_FLOOR),
-        store.index.ntotal,
+        ntotal,
     )
     hits = store.search(query_vec, top_k=fetch_k)
 
-    candidate_ids = [cid for cid, _ in hits if cid != rid]
+    candidate_ids = [str(h["id"]) for h in hits if str(h["id"]) != rid]
     meta_by_id = meta_store.get_by_ids(candidate_ids)
     source_combo = _combo_key(source)
 
     results: list[dict[str, Any]] = []
     same_combo_count = 0
-    for cid, score in hits:
+    for hit in hits:
+        cid = str(hit["id"])
+        score = float(hit["score"])
         if cid == rid:
             continue
         meta = meta_by_id.get(cid)
@@ -193,7 +192,7 @@ def recommend_similar(resource_id: str, top_k: int = 6) -> list[dict[str, Any]]:
             continue
         if _combo_key(meta) == source_combo and any(source_combo):
             if same_combo_count >= SAME_COMBO_LIMIT:
-                # Diversity: skip further identical (cefr, skill, topic) clones
+
                 continue
             same_combo_count += 1
         results.append(

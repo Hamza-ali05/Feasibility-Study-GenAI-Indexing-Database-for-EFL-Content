@@ -15,7 +15,6 @@ router = APIRouter(tags=["metrics"])
 
 EVAL_REPORT_PATH = DATA_PROCESSED / "10_evaluation_report.json"
 
-
 @router.get("", response_model=MetricsResponse)
 @router.get("/", response_model=MetricsResponse)
 def get_metrics() -> MetricsResponse:
@@ -31,4 +30,7 @@ def get_metrics() -> MetricsResponse:
         retrieval=retrieval,
         classification=classification,
         evaluation_run_at=report.get("run_at"),
+        confusion_matrix_sbert=report.get("confusion_matrix_sbert"),
+        confusion_matrix_tfidf=report.get("confusion_matrix_tfidf"),
+        confusion_matrix_labels=report.get("confusion_matrix_labels"),
     )

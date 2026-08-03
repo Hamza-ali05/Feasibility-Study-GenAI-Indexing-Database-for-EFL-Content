@@ -43,17 +43,14 @@ TFIDF_CLF_PATH = DATA_PROCESSED / "models" / "tfidf_lr_baseline.joblib"
 TFIDF_VEC_PATH = DATA_PROCESSED / "models" / "tfidf_vectorizer.joblib"
 REPORT_PATH = DATA_PROCESSED / "10_evaluation_report.json"
 
-
 def _require(path) -> None:
     if not path.exists():
         raise RuntimeError(f"Missing required artefact: {path}")
-
 
 def _l2_normalize(x: np.ndarray) -> np.ndarray:
     norms = np.linalg.norm(x, axis=1, keepdims=True)
     norms = np.maximum(norms, 1e-12)
     return (x / norms).astype(np.float32)
-
 
 def _align_test(df: pd.DataFrame, embeddings: np.ndarray, ids: list[str]) -> tuple[pd.DataFrame, np.ndarray]:
     id_to_pos = {rid: i for i, rid in enumerate(ids)}
@@ -68,7 +65,6 @@ def _align_test(df: pd.DataFrame, embeddings: np.ndarray, ids: list[str]) -> tup
     aligned = df.iloc[keep_rows].reset_index(drop=True)
     emb = embeddings[np.asarray(ordered, dtype=np.int64)]
     return aligned, emb
-
 
 def _relevant_ids_for_query(query_row: pd.Series, corpus_df: pd.DataFrame) -> set[str]:
     """Relevance: same CEFR if labeled; else same source_name."""
@@ -86,14 +82,12 @@ def _relevant_ids_for_query(query_row: pd.Series, corpus_df: pd.DataFrame) -> se
         return ids
     return set()
 
-
 def _precision_at_k(retrieved: list[str], relevant: set[str], k: int) -> float:
     if k <= 0:
         return 0.0
     top = retrieved[:k]
     hits = sum(1 for rid in top if rid in relevant)
     return hits / k
-
 
 def _recall_at_k(retrieved: list[str], relevant: set[str], k: int) -> float:
     if not relevant:
@@ -102,12 +96,10 @@ def _recall_at_k(retrieved: list[str], relevant: set[str], k: int) -> float:
     hits = sum(1 for rid in top if rid in relevant)
     return hits / len(relevant)
 
-
 def _f1_at_k(precision: float, recall: float) -> float:
     if precision + recall == 0:
         return 0.0
     return 2 * precision * recall / (precision + recall)
-
 
 def _average_precision(retrieved: list[str], relevant: set[str], k: int) -> float:
     if not relevant:
@@ -121,7 +113,6 @@ def _average_precision(retrieved: list[str], relevant: set[str], k: int) -> floa
     if hits == 0:
         return 0.0
     return sum_prec / min(len(relevant), k)
-
 
 def _aggregate_retrieval(
     retrieved_lists: list[list[str]],
@@ -160,7 +151,6 @@ def _aggregate_retrieval(
         "queries_evaluated": evaluated,
     }
 
-
 def _faiss_retrieve(
     index: faiss.Index,
     query_embeddings: np.ndarray,
@@ -180,7 +170,6 @@ def _faiss_retrieve(
         results.append(ids)
     return results
 
-
 def _tfidf_retrieve(
     vectorizer,
     corpus_texts: list[str],
@@ -190,7 +179,7 @@ def _tfidf_retrieve(
 ) -> list[list[str]]:
     corpus_matrix = vectorizer.transform(corpus_texts)
     query_matrix = vectorizer.transform(query_texts)
-    # Batch cosine in chunks to limit memory
+
     results: list[list[str]] = []
     batch = 256
     k_eff = min(k, len(corpus_ids))
@@ -202,7 +191,6 @@ def _tfidf_retrieve(
             top_sorted = top_idx[np.argsort(-row[top_idx])]
             results.append([corpus_ids[i] for i in top_sorted.tolist()])
     return results
-
 
 def _classification_metrics(y_true: list[str], y_pred: list[str]) -> tuple[dict, list]:
     labels = [c for c in CEFR_ORDER if c in set(y_true) | set(y_pred)]
@@ -222,7 +210,6 @@ def _classification_metrics(y_true: list[str], y_pred: list[str]) -> tuple[dict,
     }
     cm = confusion_matrix(y_true, y_pred, labels=labels).tolist()
     return metrics, cm
-
 
 def run() -> dict:
     pipeline_state.mark_running(STAGE_NAME)
@@ -252,7 +239,7 @@ def run() -> dict:
 
         with FAISS_ID_MAP_PATH.open("r", encoding="utf-8") as fh:
             id_map = json.load(fh)
-        # Prefer positional map 0..n-1
+
         faiss_row_to_id = [id_map[str(i)]["resource_id"] for i in range(len(corpus_ids))]
         index = faiss.read_index(str(FAISS_INDEX_PATH))
 
@@ -267,17 +254,14 @@ def run() -> dict:
             index.ntotal,
         )
 
-        # Relevance sets
         relevant_sets = [
             _relevant_ids_for_query(row, train_df) for _, row in test_df.iterrows()
         ]
 
-        # Retrieval — SBERT/FAISS
         sbert_retrieved = _faiss_retrieve(index, test_emb, faiss_row_to_id, K)
         sbert_retrieval = _aggregate_retrieval(sbert_retrieved, relevant_sets, K)
         logger.info("SBERT retrieval@%s: %s", K, sbert_retrieval)
 
-        # Retrieval — TF-IDF
         query_texts = test_df["raw_text"].fillna("").astype(str).tolist()
         tfidf_retrieved = _tfidf_retrieve(
             vectorizer, corpus_texts, corpus_ids, query_texts, K
@@ -292,7 +276,6 @@ def run() -> dict:
         for key, value in delta.items():
             logger.info("delta %s (SBERT - TFIDF) = %s", key, value)
 
-        # Classification on CEFR-labeled test rows
         labeled_mask = test_df["cefr_level"].notna()
         labeled = test_df.loc[labeled_mask].reset_index(drop=True)
         labeled_emb = test_emb[labeled_mask.to_numpy()]
@@ -362,7 +345,6 @@ def run() -> dict:
     except Exception:
         pipeline_state.mark_failed(STAGE_NAME)
         raise
-
 
 if __name__ == "__main__":
     run()

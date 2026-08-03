@@ -57,7 +57,6 @@ TOPIC_ALLOWED = {
     "Health",
 }
 
-# Prompt aliases + common content/id fields found in placed datasets
 COLUMN_ALIASES: dict[str, str] = {
     "level": "cefr_level",
     "label": "cefr_level",
@@ -88,13 +87,11 @@ COLUMN_ALIASES: dict[str, str] = {
     "resource_id": "resource_id",
 }
 
-
 def _norm_col(name: str) -> str:
     cleaned = str(name).strip().lower()
     cleaned = re.sub(r"[\s\-]+", "_", cleaned)
     cleaned = re.sub(r"[^a-z0-9_]", "", cleaned)
     return cleaned
-
 
 def _apply_column_aliases(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str]]:
     mapping: dict[str, str] = {}
@@ -104,18 +101,18 @@ def _apply_column_aliases(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str
         target = COLUMN_ALIASES.get(norm)
         if target:
             mapping[col] = target
-            # Prefer keeping an existing canonical column if both map to same target
+
             if target in df.columns and col != target:
-                # merge later; skip rename conflict by copying into target if target empty
+
                 continue
             if target not in rename.values():
                 rename[col] = target
             else:
-                # collision: keep first mapping; secondary handled in coalesce
+
                 mapping[col] = target
 
     out = df.rename(columns=rename)
-    # For alias sources that weren't renamed due to collision, coalesce into target
+
     for original, target in mapping.items():
         if original in out.columns and original != target:
             if target not in out.columns:
@@ -123,16 +120,14 @@ def _apply_column_aliases(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str
             else:
                 out[target] = out[target].where(out[target].notna() & (out[target].astype(str).str.len() > 0), out[original])
             if original != target and original in out.columns and original not in CANONICAL_COLUMNS:
-                # keep original for report; do not drop yet
+
                 pass
     return out, mapping
-
 
 def _series_str(series: pd.Series | None, index: pd.Index) -> pd.Series:
     if series is None:
         return pd.Series([None] * len(index), index=index, dtype="object")
     return series
-
 
 def _null_if_blank(value: object) -> str | None:
     if value is None or (isinstance(value, float) and pd.isna(value)):
@@ -142,25 +137,23 @@ def _null_if_blank(value: object) -> str | None:
         return None
     return text
 
-
 def _normalise_cefr(value: object) -> str | None:
     text = _null_if_blank(value)
     if text is None:
         return None
     token = text.strip().upper().replace(" ", "")
-    # allow forms like "a1", "CEFR:A2"
+
     match = re.search(r"\b(A1|A2|B1|B2|C1|C2)\b", token)
     if match:
         token = match.group(1)
     return token if token in CEFR_ALLOWED else None
-
 
 def _normalise_skill(value: object) -> str | None:
     text = _null_if_blank(value)
     if text is None:
         return None
     titled = text.strip().title()
-    # map common synonyms without inventing from unrelated fields
+
     synonyms = {
         "Read": "Reading",
         "Write": "Writing",
@@ -171,18 +164,16 @@ def _normalise_skill(value: object) -> str | None:
     titled = synonyms.get(titled, titled)
     return titled if titled in SKILL_ALLOWED else None
 
-
 def _normalise_topic(value: object) -> str | None:
     text = _null_if_blank(value)
     if text is None:
         return None
-    # Title-case but keep "Daily Life"
+
     cleaned = re.sub(r"\s+", " ", text.strip())
     titled = cleaned.title()
     if titled.lower() == "daily life":
         titled = "Daily Life"
     return titled if titled in TOPIC_ALLOWED else None
-
 
 def _source_name_from_path(source_file: object) -> str | None:
     text = _null_if_blank(source_file)
@@ -193,7 +184,6 @@ def _source_name_from_path(source_file: object) -> str | None:
         return parts[0]
     return Path(parts[-1]).stem if parts else None
 
-
 def _title_from_text(raw_text: object) -> str | None:
     text = _null_if_blank(raw_text)
     if text is None:
@@ -201,11 +191,9 @@ def _title_from_text(raw_text: object) -> str | None:
     compact = re.sub(r"\s+", " ", text).strip()
     return compact[:80] if compact else None
 
-
 def integrate(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     working, column_mapping = _apply_column_aliases(df)
 
-    # Coalesce multi-source content columns that share aliases but weren't renamed
     for col in list(working.columns):
         norm = _norm_col(col)
         target = COLUMN_ALIASES.get(norm)
@@ -270,7 +258,6 @@ def integrate(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     }
     return out, {"null_counts_per_column": null_counts, **report_meta}
 
-
 def run() -> dict:
     pipeline_state.mark_running(STAGE_NAME)
     try:
@@ -311,7 +298,6 @@ def run() -> dict:
     except Exception:
         pipeline_state.mark_failed(STAGE_NAME)
         raise
-
 
 if __name__ == "__main__":
     run()

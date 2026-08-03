@@ -21,23 +21,18 @@ logger = get_logger("efl_indexdb.rag")
 
 SNIPPET_CHARS = 480
 
-
 def _require_api_key() -> str:
-    key = Config.ANTHROPIC_API_KEY
-    if not key or not str(key).strip():
-        raise ValueError(
-            "ANTHROPIC_API_KEY is not set. Add it to the project-root .env file "
-            "to enable AI Question Answering (RAG). No answer was fabricated."
-        )
-    return str(key).strip()
+    try:
+        return str(Config.require("ANTHROPIC_API_KEY"))
+    except RuntimeError as exc:
 
+        raise ValueError(str(exc)) from exc
 
 def _snippet(text: str, limit: int = SNIPPET_CHARS) -> str:
     cleaned = " ".join((text or "").split())
     if len(cleaned) <= limit:
         return cleaned
     return cleaned[: limit - 1].rstrip() + "…"
-
 
 def retrieve_context(question: str, top_k: int = 5) -> list[dict[str, Any]]:
     """Embed ``question``, FAISS top-k, attach metadata ``raw_text`` snippets."""
@@ -49,14 +44,16 @@ def retrieve_context(question: str, top_k: int = 5) -> list[dict[str, Any]]:
     logger.info("RAG retrieve: loading SBERT embedder (first call can take minutes)…")
     embedder = get_embedder()
     logger.info("RAG retrieve: embedding question…")
-    query_vec = embedder.encode([q], batch_size=1, show_progress_bar=False)[0]
+    query_vec = embedder.embed_single(q)
     logger.info("RAG retrieve: querying FAISS top_k=%s…", k)
     store = get_vector_store()
     hits = store.search(query_vec, top_k=k)
 
-    meta_by_id = MetadataStore().get_by_ids([rid for rid, _ in hits])
+    meta_by_id = MetadataStore().get_by_ids([str(h["id"]) for h in hits])
     contexts: list[dict[str, Any]] = []
-    for resource_id, score in hits:
+    for hit in hits:
+        resource_id = str(hit["id"])
+        score = float(hit["score"])
         meta = meta_by_id.get(resource_id)
         if meta is None:
             continue
@@ -68,11 +65,11 @@ def retrieve_context(question: str, top_k: int = 5) -> list[dict[str, Any]]:
                 "title": str(title),
                 "text_snippet": _snippet(raw),
                 "similarity_score": float(score),
+                "cefr_level": meta.get("cefr_level"),
             }
         )
     logger.info("RAG retrieve: %s context chunks", len(contexts))
     return contexts
-
 
 def build_prompt(question: str, contexts: list[dict[str, Any]]) -> str:
     """Instruct the LLM to answer only from supplied EFL index context."""
@@ -102,7 +99,6 @@ def build_prompt(question: str, contexts: list[dict[str, Any]]) -> str:
         "Answer:"
     )
 
-
 def _raise_anthropic_error(exc: Exception) -> None:
     """Map Anthropic SDK errors to ValueError; never invent an answer."""
     msg = str(exc)
@@ -119,7 +115,6 @@ def _raise_anthropic_error(exc: Exception) -> None:
             "No answer was fabricated."
         ) from exc
     raise ValueError(f"Anthropic API request failed: {exc}") from exc
-
 
 def ask(question: str, top_k: int = 5) -> dict[str, Any]:
     """Retrieve context and call Anthropic once; return answer + sources + model."""
@@ -159,7 +154,6 @@ def ask(question: str, top_k: int = 5) -> dict[str, Any]:
     )
     logger.info("RAG ask model=%s sources=%s", model, len(contexts))
     return {"answer": answer, "sources": contexts, "model": model}
-
 
 async def ask_stream(question: str, top_k: int = 5) -> AsyncGenerator[str, None]:
     """Same grounding as ``ask``, streaming answer tokens via Anthropic."""

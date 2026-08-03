@@ -24,7 +24,6 @@ INPUT_PATH = DATA_PROCESSED / "03_integrated.parquet"
 OUTPUT_PATH = DATA_PROCESSED / "05_cleaned.parquet"
 REPORT_PATH = DATA_PROCESSED / "05_clean_report.json"
 
-
 def run() -> dict:
     pipeline_state.mark_running(STAGE_NAME)
     try:
@@ -67,7 +66,6 @@ def run() -> dict:
     except Exception:
         pipeline_state.mark_failed(STAGE_NAME)
         raise
-
 
 if __name__ == "__main__":
     run()

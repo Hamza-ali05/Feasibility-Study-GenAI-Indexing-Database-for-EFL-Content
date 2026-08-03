@@ -41,10 +41,8 @@ STATUS_COMPLETE = "COMPLETE"
 STATUS_FAILED = "FAILED"
 VALID_STATUSES = {STATUS_PENDING, STATUS_RUNNING, STATUS_COMPLETE, STATUS_FAILED}
 
-
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
-
 
 def _empty_stage() -> dict[str, Any]:
     return {
@@ -54,10 +52,8 @@ def _empty_stage() -> dict[str, Any]:
         "progress_pct": None,
     }
 
-
 def _default_state() -> dict[str, dict[str, Any]]:
     return {name: _empty_stage() for name in STAGES_IN_ORDER}
-
 
 def _normalise_stage_entry(value: Any) -> dict[str, Any]:
     """Accept legacy string statuses or the nested schema."""
@@ -80,10 +76,9 @@ def _normalise_stage_entry(value: Any) -> dict[str, Any]:
         return entry
     return _empty_stage()
 
-
 def _ensure_all_stages(state: dict[str, Any]) -> dict[str, dict[str, Any]]:
     normalised: dict[str, dict[str, Any]] = {}
-    # Legacy wrapper {"stages": {...}, "updated_at": ...}
+
     if "stages" in state and isinstance(state["stages"], dict):
         raw = state["stages"]
     else:
@@ -92,10 +87,8 @@ def _ensure_all_stages(state: dict[str, Any]) -> dict[str, dict[str, Any]]:
         normalised[name] = _normalise_stage_entry(raw.get(name))
     return normalised
 
-
 def _state_path(path: Path | None = None) -> Path:
     return path or PIPELINE_STATE_PATH
-
 
 def _broadcast(stage: str, status: str, progress_pct: float | None = None) -> None:
     """Best-effort WS broadcast — never raise during CLI runs."""
@@ -108,9 +101,8 @@ def _broadcast(stage: str, status: str, progress_pct: float | None = None) -> No
         if broadcast is None:
             return
         broadcast(stage, status, progress_pct=progress_pct)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("pipeline WS broadcast skipped: %s", exc)
-
 
 def load_state(path: Path | None = None) -> dict[str, dict[str, Any]]:
     state_path = _state_path(path)
@@ -121,11 +113,10 @@ def load_state(path: Path | None = None) -> dict[str, dict[str, Any]]:
     with state_path.open("r", encoding="utf-8") as fh:
         raw = json.load(fh)
     state = _ensure_all_stages(raw)
-    # Persist migration if legacy format was loaded
+
     if "stages" in raw or any(isinstance(raw.get(k), str) for k in STAGES_IN_ORDER if k in raw):
         save_state(state, state_path)
     return state
-
 
 def save_state(state: dict[str, dict[str, Any]], path: Path | None = None) -> None:
     state_path = _state_path(path)
@@ -134,7 +125,6 @@ def save_state(state: dict[str, dict[str, Any]], path: Path | None = None) -> No
     with state_path.open("w", encoding="utf-8") as fh:
         json.dump(clean, fh, indent=2)
         fh.write("\n")
-
 
 def set_stage_status(
     stage: str,
@@ -169,10 +159,8 @@ def set_stage_status(
     logger.info("pipeline_state: %s → %s", stage, status)
     _broadcast(stage, status, progress_pct=entry.get("progress_pct"))
 
-
 def get_all_statuses(path: Path | None = None) -> dict[str, dict[str, Any]]:
     return load_state(path)
-
 
 def get_current_stage(path: Path | None = None) -> str:
     """Return the first PENDING stage (or empty string if none)."""
@@ -182,17 +170,14 @@ def get_current_stage(path: Path | None = None) -> str:
             return name
     return ""
 
-
 def is_pipeline_ready(path: Path | None = None) -> bool:
     state = load_state(path)
     return state["Predict"]["status"] == STATUS_COMPLETE
-
 
 def reset_stage(stage: str, path: Path | None = None) -> None:
     if stage not in STAGES_IN_ORDER:
         raise ValueError(f"Unknown pipeline stage: {stage!r}")
     set_stage_status(stage, STATUS_PENDING, error=None, progress_pct=None, path=path)
-
 
 def reset_all(path: Path | None = None) -> None:
     state = _default_state()
@@ -201,15 +186,11 @@ def reset_all(path: Path | None = None) -> None:
     for name in STAGES_IN_ORDER:
         _broadcast(name, STATUS_PENDING, progress_pct=None)
 
-
-# Backward-compatible helpers used by existing stage modules
 def mark_running(stage: str, path: Path | None = None) -> None:
     set_stage_status(stage, STATUS_RUNNING, progress_pct=0.0, path=path)
 
-
 def mark_complete(stage: str, path: Path | None = None) -> None:
     set_stage_status(stage, STATUS_COMPLETE, progress_pct=100.0, path=path)
-
 
 def mark_failed(stage: str, error: str | None = None, path: Path | None = None) -> None:
     set_stage_status(stage, STATUS_FAILED, error=error, path=path)

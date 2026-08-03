@@ -27,10 +27,8 @@ logger = get_logger("efl_indexdb.websocket")
 
 router = APIRouter()
 
-
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
-
 
 class ConnectionManager:
     """Tracks active ``/ws/pipeline`` clients and fans out JSON events."""
@@ -46,7 +44,7 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket) -> None:
         await websocket.accept()
         self.active_connections.append(websocket)
-        # Prefer the running loop from an active connection
+
         try:
             self._loop = asyncio.get_running_loop()
         except RuntimeError:
@@ -63,7 +61,7 @@ class ConnectionManager:
         for connection in list(self.active_connections):
             try:
                 await connection.send_json(json_payload)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.warning("WS send failed; dropping client: %s", exc)
                 dead.append(connection)
         for connection in dead:
@@ -87,17 +85,14 @@ class ConnectionManager:
             def _done(f: asyncio.Future) -> None:
                 try:
                     f.result()
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:
                     logger.warning("WS scheduled broadcast error: %s", exc)
 
             fut.add_done_callback(_done)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning("WS schedule_broadcast failed: %s", exc)
 
-
-# Module-level singleton
 manager = ConnectionManager()
-
 
 def broadcast_pipeline_event(
     stage: str,
@@ -115,7 +110,6 @@ def broadcast_pipeline_event(
     payload.update(extra)
     manager.schedule_broadcast(payload)
 
-
 def broadcast_pipeline_status(
     stage: str,
     status: str,
@@ -126,7 +120,6 @@ def broadcast_pipeline_status(
     """Backward-compatible alias used by older stage call sites."""
     broadcast_pipeline_event(stage, status, progress_pct=progress_pct, **extra)
 
-
 def broadcast_search_event(query: str, result_count: int) -> None:
     """Live Search Analytics tick for an admin Dashboard watcher."""
     payload = {
@@ -136,7 +129,6 @@ def broadcast_search_event(query: str, result_count: int) -> None:
         "timestamp": _utc_now(),
     }
     manager.schedule_broadcast(payload)
-
 
 def broadcast_duplicate_flag(
     resource_id_a: str,
@@ -153,7 +145,6 @@ def broadcast_duplicate_flag(
     }
     manager.schedule_broadcast(payload)
 
-
 def broadcast_duplicates_pending(pending_count: int) -> None:
     """Dashboard live update after resolve / rescan."""
     payload = {
@@ -163,7 +154,6 @@ def broadcast_duplicates_pending(pending_count: int) -> None:
     }
     manager.schedule_broadcast(payload)
 
-
 @router.websocket("/ws/pipeline")
 async def pipeline_websocket(websocket: WebSocket) -> None:
     await manager.connect(websocket)
@@ -171,18 +161,18 @@ async def pipeline_websocket(websocket: WebSocket) -> None:
         await websocket.send_json({"type": "connected", "channel": "pipeline"})
         while True:
             try:
-                # Ping/pong keep-alive: respond to client pings; server ping on idle
+
                 message = await asyncio.wait_for(websocket.receive_text(), timeout=25.0)
                 if message.strip().lower() in {"ping", "pong"}:
                     await websocket.send_text("pong")
                 else:
-                    # Ignore other client messages; connection stays open
+
                     await websocket.send_json({"type": "ack"})
             except asyncio.TimeoutError:
                 await websocket.send_json({"type": "ping", "timestamp": _utc_now()})
     except WebSocketDisconnect:
         logger.info("WS client disconnected cleanly")
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("WS connection error: %s", exc)
     finally:
         manager.disconnect(websocket)

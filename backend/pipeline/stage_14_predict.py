@@ -45,14 +45,12 @@ RESULT_FIELDS = [
     "similarity_score",
 ]
 
-
 def _l2_normalize(x: np.ndarray) -> np.ndarray:
     if x.ndim == 1:
         x = x.reshape(1, -1)
     norms = np.linalg.norm(x, axis=1, keepdims=True)
     norms = np.maximum(norms, 1e-12)
     return (x / norms).astype(np.float32)
-
 
 def _load_corpus() -> tuple[pd.DataFrame, dict[str, int], list[str]]:
     if not BALANCED_PARQUET.exists():
@@ -66,14 +64,13 @@ def _load_corpus() -> tuple[pd.DataFrame, dict[str, int], list[str]]:
 
     by_resource = id_map.get("by_resource_id") or {}
     if not by_resource:
-        # rebuild from positional entries
+
         by_resource = {
             id_map[str(i)]["resource_id"]: i
             for i in range(len(df))
             if str(i) in id_map
         }
 
-    # Stable FAISS row → resource_id list
     ntotal = len(by_resource)
     row_to_id = [""] * ntotal
     for rid, idx in by_resource.items():
@@ -84,7 +81,6 @@ def _load_corpus() -> tuple[pd.DataFrame, dict[str, int], list[str]]:
     meta["resource_id"] = meta["resource_id"].astype(str)
     meta = meta.set_index("resource_id", drop=False)
     return meta, {str(k): int(v) for k, v in by_resource.items()}, row_to_id
-
 
 def _row_payload(rank: int, resource_id: str, score: float, meta: pd.DataFrame) -> dict:
     if resource_id in meta.index:
@@ -122,7 +118,6 @@ def _row_payload(rank: int, resource_id: str, score: float, meta: pd.DataFrame) 
         "similarity_score": float(score),
     }
 
-
 def _faiss_search(
     query_vec: np.ndarray,
     index: faiss.Index,
@@ -143,7 +138,6 @@ def _faiss_search(
         results.append(_row_payload(rank, rid, score, meta))
     return results
 
-
 def _tfidf_search(
     query: str,
     vectorizer,
@@ -162,7 +156,6 @@ def _tfidf_search(
     for rank, i in enumerate(top_sorted.tolist(), start=1):
         results.append(_row_payload(rank, str(corpus_ids[i]), float(sims[i]), meta))
     return results
-
 
 def _print_side_by_side(faiss_hits: list[dict], tfidf_hits: list[dict]) -> None:
     def _short(row: dict | None) -> str:
@@ -183,7 +176,6 @@ def _print_side_by_side(faiss_hits: list[dict], tfidf_hits: list[dict]) -> None:
     print("\n=== Predict results (FAISS semantic vs TF-IDF) ===")
     print(tabulate(table, headers=["k", "FAISS / SBERT", "TF-IDF"], tablefmt="github"))
     print()
-
 
 def predict(query: str, top_k: int = 10) -> dict:
     for path in (
@@ -232,7 +224,6 @@ def predict(query: str, top_k: int = 10) -> dict:
     }
     return payload
 
-
 def run(query: str, top_k: int = 10) -> dict:
     pipeline_state.mark_running(STAGE_NAME)
     try:
@@ -247,7 +238,6 @@ def run(query: str, top_k: int = 10) -> dict:
         print(f"Predicted query CEFR: {payload['predicted_query_cefr']}")
         _print_side_by_side(payload["faiss_results"], payload["tfidf_results"])
 
-        # Detailed FAISS table
         faiss_table = [
             [
                 r["rank"],
@@ -284,7 +274,6 @@ def run(query: str, top_k: int = 10) -> dict:
         pipeline_state.mark_failed(STAGE_NAME)
         raise
 
-
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="EFL IndexDB Predict — semantic resource search")
     parser.add_argument("--query", required=True, help="Free-text search query")
@@ -293,7 +282,6 @@ def main(argv: list[str] | None = None) -> None:
     if args.top_k < 1:
         raise SystemExit("--top_k must be >= 1")
     run(query=args.query, top_k=args.top_k)
-
 
 if __name__ == "__main__":
     main()

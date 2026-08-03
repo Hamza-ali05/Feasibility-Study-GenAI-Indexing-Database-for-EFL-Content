@@ -13,7 +13,7 @@ import joblib
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import shap
@@ -38,10 +38,9 @@ TEXT_MUTED = "#888780"
 TEXT_PRIMARY = "#2C2C2A"
 
 TOP_N = 20
-# Cap rows for SHAP / beeswarm speed while remaining representative
+
 MAX_EXPLAIN_ROWS = 2000
 RANDOM_STATE = 42
-
 
 def _style_axes(ax: plt.Axes) -> None:
     ax.set_facecolor(BG_PAGE)
@@ -51,7 +50,6 @@ def _style_axes(ax: plt.Axes) -> None:
     ax.title.set_color(TEXT_PRIMARY)
     for spine in ax.spines.values():
         spine.set_color(BORDER)
-
 
 def _load_labeled_matrix() -> tuple[np.ndarray, np.ndarray, list[str]]:
     if not BALANCED_PARQUET.exists() or not BALANCED_EMBEDDINGS.exists():
@@ -81,7 +79,6 @@ def _load_labeled_matrix() -> tuple[np.ndarray, np.ndarray, list[str]]:
 
     return X, y, sorted(set(y.tolist()))
 
-
 def _mean_abs_shap_per_class(
     shap_values: list[np.ndarray] | np.ndarray,
     class_names: list[str],
@@ -94,7 +91,7 @@ def _mean_abs_shap_per_class(
     if isinstance(shap_values, list):
         per_class = shap_values
     elif isinstance(shap_values, np.ndarray) and shap_values.ndim == 3:
-        # (n_samples, n_features, n_classes) or (n_classes, n_samples, n_features)
+
         if shap_values.shape[0] == len(class_names):
             per_class = [shap_values[i] for i in range(len(class_names))]
         else:
@@ -103,7 +100,6 @@ def _mean_abs_shap_per_class(
         per_class = [np.asarray(shap_values)]
         class_names = class_names[:1] or ["model"]
 
-    # Global ranking by mean |SHAP| across classes
     stacked = np.stack([np.abs(arr).mean(axis=0) for arr in per_class], axis=0)
     global_mean = stacked.mean(axis=0)
     top_idx = np.argsort(-global_mean)[:TOP_N]
@@ -122,7 +118,6 @@ def _mean_abs_shap_per_class(
         results.append(entry)
     return results
 
-
 def _plot_summary_bar(mean_abs: np.ndarray, feature_names: list[str], path) -> None:
     top_idx = np.argsort(-mean_abs)[:TOP_N]
     labels = [feature_names[i] for i in top_idx][::-1]
@@ -137,14 +132,13 @@ def _plot_summary_bar(mean_abs: np.ndarray, feature_names: list[str], path) -> N
     fig.savefig(path, dpi=120, facecolor=BG_PAGE)
     plt.close(fig)
 
-
 def _plot_beeswarm(shap_values, X: np.ndarray, feature_names: list[str], path) -> None:
     """
     Beeswarm for the class with highest mean |SHAP| mass (or first class).
     Uses shap.summary_plot then restyles figure colours.
     """
     if isinstance(shap_values, list):
-        # Pick class with largest overall |SHAP|
+
         masses = [float(np.abs(v).mean()) for v in shap_values]
         class_i = int(np.argmax(masses))
         values = shap_values[class_i]
@@ -184,7 +178,6 @@ def _plot_beeswarm(shap_values, X: np.ndarray, feature_names: list[str], path) -
     plt.close(fig)
     logger.info("beeswarm used SHAP values for class_index=%s", class_i)
 
-
 def run() -> dict:
     pipeline_state.mark_running(STAGE_NAME)
     try:
@@ -201,7 +194,6 @@ def run() -> dict:
         explainer = shap.LinearExplainer(model, X)
         shap_values = explainer.shap_values(X)
 
-        # Global mean |SHAP| across classes for bar plot
         top_features = _mean_abs_shap_per_class(shap_values, class_names, feature_names)
         if isinstance(shap_values, list):
             global_mean_abs = np.mean([np.abs(v).mean(axis=0) for v in shap_values], axis=0)
@@ -246,7 +238,6 @@ def run() -> dict:
     except Exception:
         pipeline_state.mark_failed(STAGE_NAME)
         raise
-
 
 if __name__ == "__main__":
     run()

@@ -11,12 +11,10 @@ import sys
 
 import bcrypt
 
-
 def hash_password(plain: str) -> str:
-    # bcrypt only uses the first 72 bytes
+
     raw = plain.encode("utf-8")[:72]
     return bcrypt.hashpw(raw, bcrypt.gensalt()).decode("utf-8")
-
 
 def main() -> None:
     if len(sys.argv) < 2 or not sys.argv[1].strip():
@@ -26,7 +24,6 @@ def main() -> None:
         )
         sys.exit(1)
     print(hash_password(sys.argv[1]))
-
 
 if __name__ == "__main__":
     main()

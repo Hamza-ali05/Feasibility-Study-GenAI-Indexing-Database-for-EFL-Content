@@ -37,7 +37,6 @@ TOP_FEATURES = 5
 RANDOM_STATE = 42
 LIME_TRAIN_CAP = 1500
 
-
 def _align(df: pd.DataFrame, embeddings: np.ndarray, ids: list[str]) -> tuple[pd.DataFrame, np.ndarray]:
     id_to_pos = {rid: i for i, rid in enumerate(ids)}
     keep: list[int] = []
@@ -50,14 +49,13 @@ def _align(df: pd.DataFrame, embeddings: np.ndarray, ids: list[str]) -> tuple[pd
         ordered.append(pos)
     return df.iloc[keep].reset_index(drop=True), embeddings[np.asarray(ordered, dtype=np.int64)]
 
-
 def _stratified_sample(df: pd.DataFrame, n: int = N_SAMPLES, seed: int = RANDOM_STATE) -> pd.DataFrame:
     rng = np.random.default_rng(seed)
     labeled = df[df["cefr_level"].notna()].copy()
     selected_idx: list[int] = []
 
     if len(labeled):
-        # Aim for 1–2 per CEFR level present
+
         levels = [c for c in CEFR_ORDER if (labeled["cefr_level"].astype(str) == c).any()]
         if levels:
             base = max(1, n // len(levels))
@@ -70,7 +68,6 @@ def _stratified_sample(df: pd.DataFrame, n: int = N_SAMPLES, seed: int = RANDOM_
                 chosen = rng.choice(pool, size=take, replace=False)
                 selected_idx.extend(chosen.tolist())
 
-    # Fill remaining slots from any test rows
     if len(selected_idx) < n:
         remaining = df.index.difference(selected_idx).to_numpy()
         need = n - len(selected_idx)
@@ -83,7 +80,6 @@ def _stratified_sample(df: pd.DataFrame, n: int = N_SAMPLES, seed: int = RANDOM_
         raise RuntimeError("Could not sample any test rows for Explain Local")
     return df.loc[selected_idx].reset_index(drop=True)
 
-
 def _build_dim_token_map(model_name: str = DEFAULT_MODEL_NAME, top_per_dim: int = 1) -> dict[int, str]:
     """
     Approximate mapping: for each embedding dimension, pick the tokenizer
@@ -94,7 +90,7 @@ def _build_dim_token_map(model_name: str = DEFAULT_MODEL_NAME, top_per_dim: int 
     st = SentenceTransformer(model_name)
     tokenizer = st.tokenizer
     emb_layer = st[0].auto_model.get_input_embeddings()
-    weight = emb_layer.weight.detach().cpu().numpy()  # (vocab, hidden)
+    weight = emb_layer.weight.detach().cpu().numpy()
 
     special = set(int(i) for i in tokenizer.all_special_ids)
     abs_w = np.abs(weight)
@@ -107,7 +103,6 @@ def _build_dim_token_map(model_name: str = DEFAULT_MODEL_NAME, top_per_dim: int 
         piece = tokenizer.convert_ids_to_tokens(int(vocab_id))
         mapping[d] = piece if piece else f"dim_{d}"
     return mapping
-
 
 def _lime_top_features(
     explainer: LimeTabularExplainer,
@@ -127,7 +122,7 @@ def _lime_top_features(
     pairs = explanation.as_list(label=label_idx)
     features: list[dict] = []
     for name, weight in pairs[:TOP_FEATURES]:
-        # Lime feature names are like "dim_12 <= 0.1" or "dim_12"
+
         dim = None
         text = str(name)
         for part in text.replace(">", " ").replace("<", " ").replace("=", " ").split():
@@ -138,7 +133,7 @@ def _lime_top_features(
                     dim = None
                 break
         if dim is None:
-            # fallback parse digits
+
             digits = "".join(ch if ch.isdigit() else " " for ch in text).split()
             dim = int(digits[0]) if digits else -1
         features.append(
@@ -150,7 +145,6 @@ def _lime_top_features(
             }
         )
     return features
-
 
 def run() -> dict:
     pipeline_state.mark_running(STAGE_NAME)
@@ -172,7 +166,6 @@ def run() -> dict:
             test_ids = json.load(fh)
         test_df, test_emb = _align(test_df, test_emb, test_ids)
 
-        # Keep embeddings aligned with sampled rows via original positions
         test_df = test_df.copy()
         test_df["_emb_row"] = np.arange(len(test_df))
 
@@ -224,7 +217,7 @@ def run() -> dict:
                 class_names,
                 dim_token_map,
             )
-            # Human-readable one-liner
+
             bits = [
                 f"{f['approx_token']}(dim {f['dim']}:{f['weight']:+.3f})"
                 for f in top_features
@@ -253,12 +246,11 @@ def run() -> dict:
             "seed": RANDOM_STATE,
             "explanations": records,
         }
-        # Also expose the list at top-level convenience for the required schema shape
-        # Required: list of explanation objects — keep both forms
+
         with REPORT_PATH.open("w", encoding="utf-8") as fh:
             json.dump(records, fh, indent=2)
             fh.write("\n")
-        # Side meta report
+
         meta_path = DATA_PROCESSED / "12_explain_local_meta.json"
         with meta_path.open("w", encoding="utf-8") as fh:
             json.dump(report, fh, indent=2)
@@ -270,7 +262,6 @@ def run() -> dict:
     except Exception:
         pipeline_state.mark_failed(STAGE_NAME)
         raise
-
 
 if __name__ == "__main__":
     run()

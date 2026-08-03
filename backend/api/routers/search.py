@@ -26,17 +26,15 @@ logger = get_logger("efl_indexdb.api.search")
 router = APIRouter(tags=["search"])
 
 SBERT_CLF_PATH = DATA_PROCESSED / "models" / "sbert_lr_classifier.joblib"
-# Over-fetch from FAISS then filter so Smart Filters still fill top_k
+
 CANDIDATE_MULTIPLIER = 25
 CANDIDATE_FLOOR = 50
-
 
 @lru_cache(maxsize=1)
 def _get_classifier():
     if not SBERT_CLF_PATH.exists():
         return None
     return joblib.load(SBERT_CLF_PATH)
-
 
 def _require_pipeline_ready() -> None:
     if not pipeline_state.is_pipeline_ready():
@@ -45,7 +43,6 @@ def _require_pipeline_ready() -> None:
             detail="Pipeline not ready. Run all stages first.",
         )
 
-
 def _build_tags(meta: dict) -> list[str]:
     tags: list[str] = []
     for key in ("cefr_level", "skill_type", "topic_domain"):
@@ -53,7 +50,6 @@ def _build_tags(meta: dict) -> list[str]:
         if val is not None and str(val).strip():
             tags.append(str(val))
     return tags
-
 
 def _passes_filters(meta: dict, body: SearchQuery) -> bool:
     if body.cefr_level and str(meta.get("cefr_level") or "") != body.cefr_level:
@@ -64,17 +60,15 @@ def _passes_filters(meta: dict, body: SearchQuery) -> bool:
         return False
     return True
 
-
 def _predict_query_cefr(query_vec: np.ndarray) -> str | None:
     clf = _get_classifier()
     if clf is None:
         return None
     try:
         return str(clf.predict(query_vec.reshape(1, -1))[0])
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("query CEFR prediction failed: %s", exc)
         return None
-
 
 @router.post("", response_model=SearchResponse)
 @router.post("/", response_model=SearchResponse)
@@ -88,7 +82,7 @@ def semantic_search(body: SearchQuery) -> SearchResponse:
     fetch_k = max(top_k * CANDIDATE_MULTIPLIER, CANDIDATE_FLOOR)
 
     embedder = get_embedder()
-    query_vec = embedder.encode([body.query.strip()], batch_size=1, show_progress_bar=False)[0]
+    query_vec = embedder.embed_single(body.query.strip())
     query_cefr = _predict_query_cefr(query_vec)
 
     try:
@@ -98,10 +92,12 @@ def semantic_search(body: SearchQuery) -> SearchResponse:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     meta_store = MetadataStore()
-    meta_by_id = meta_store.get_by_ids([rid for rid, _ in hits])
+    meta_by_id = meta_store.get_by_ids([str(h["id"]) for h in hits])
 
     results: list[SearchResult] = []
-    for resource_id, score in hits:
+    for hit in hits:
+        resource_id = str(hit["id"])
+        score = float(hit["score"])
         meta = meta_by_id.get(resource_id)
         if meta is None:
             continue
@@ -144,16 +140,14 @@ def semantic_search(body: SearchQuery) -> SearchResponse:
         engine="faiss+sbert",
     )
 
-
 @router.get("/suggest", response_model=list[str])
 def suggest(q: str = Query("", min_length=0)) -> list[str]:
     """Live-typing title autocomplete from metadata store."""
     store = MetadataStore()
-    return store.suggest_titles(q, limit=5)
-
+    return store.search_titles(q, limit=5)
 
 @router.get("/facets")
 def facets() -> dict[str, dict[str, int]]:
     """Distinct CEFR / skill / topic values with counts for Smart Filters."""
     store = MetadataStore()
-    return store.facet_counts()
+    return store.facets()

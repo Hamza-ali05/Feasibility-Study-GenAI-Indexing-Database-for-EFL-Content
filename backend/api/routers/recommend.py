@@ -17,7 +17,6 @@ logger = get_logger("efl_indexdb.api.recommend")
 
 router = APIRouter(tags=["recommend"])
 
-
 class RecommendationItem(BaseModel):
     resource_id: str
     title: str
@@ -27,11 +26,9 @@ class RecommendationItem(BaseModel):
     similarity_score: float
     reason: str
 
-
 class RecommendResponse(BaseModel):
     resource_id: str
     recommendations: list[RecommendationItem] = Field(default_factory=list)
-
 
 def _require_train_complete() -> None:
     state = pipeline_state.get_all_statuses()
@@ -41,7 +38,6 @@ def _require_train_complete() -> None:
             status_code=503,
             detail="Stage Train is not COMPLETE. FAISS index is required for recommendations.",
         )
-
 
 @router.get("/{resource_id}", response_model=RecommendResponse)
 def recommend_similar(

@@ -34,10 +34,8 @@ CREATE TABLE IF NOT EXISTS resource_views (
 );
 """
 
-
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
-
 
 class AnalyticsStore:
     """Usage insights store — ``data/processed/analytics.db`` (from Config)."""
@@ -48,8 +46,11 @@ class AnalyticsStore:
         self._init_db()
 
     def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
         conn.row_factory = sqlite3.Row
+
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA busy_timeout=5000")
         return conn
 
     def _init_db(self) -> None:
@@ -103,7 +104,7 @@ class AnalyticsStore:
         result_count: int = 0,
         top_result_id: str | None = None,
         created_at: str | None = None,
-        # Backward-compatible aliases used by older call sites
+
         query_text: str | None = None,
         filters: dict[str, Any] | None = None,
     ) -> int:
@@ -295,6 +296,10 @@ class AnalyticsStore:
         ]
 
     def most_viewed_resources(self, limit: int = 10) -> list[dict[str, Any]]:
+        """
+        Top viewed resources with titles joined from MetadataStore
+        (Prompt 4-Q — frontend should not stitch IDs to titles).
+        """
         with self._connect() as conn:
             rows = conn.execute(
                 """
@@ -307,9 +312,23 @@ class AnalyticsStore:
                 """,
                 (int(limit),),
             ).fetchall()
+
+        ids = [str(r["resource_id"]) for r in rows]
+        titles: dict[str, str] = {}
+        if ids:
+
+            from backend.db.metadata_store import MetadataStore
+
+            meta_by_id = MetadataStore().get_by_ids(ids)
+            for rid, meta in meta_by_id.items():
+                title = meta.get("title")
+                if title is not None and str(title).strip():
+                    titles[str(rid)] = str(title).strip()
+
         return [
             {
-                "resource_id": r["resource_id"],
+                "resource_id": str(r["resource_id"]),
+                "title": titles.get(str(r["resource_id"])) or str(r["resource_id"]),
                 "views": int(r["views"]),
                 "last_viewed": r["last_viewed"],
             }
