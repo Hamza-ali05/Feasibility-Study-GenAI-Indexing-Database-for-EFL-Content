@@ -1,5 +1,3 @@
-
-
 import { useEffect, useState } from "react";
 
 import { useLocation, NavLink } from "react-router-dom";
@@ -85,7 +83,6 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
       let returnValue;
 
       if (type === "collapse") {
-
         if (Array.isArray(collapse) && collapse.length > 0) {
           const isOpen = Boolean(openNested[key]);
           const childActive = collapse.some((c) => pathMatches(pathname, c.route));
@@ -178,7 +175,6 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
           />
         );
       } else {
-
         returnValue = null;
       }
 

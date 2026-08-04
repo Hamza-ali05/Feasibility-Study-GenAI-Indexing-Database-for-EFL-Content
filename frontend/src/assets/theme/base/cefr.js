@@ -1,5 +1,3 @@
-
-
 const CEFR_COLORS = {
   A1: { bg: "#EAF3EC", text: "#1F5F3F", border: "#BFDCC8" },
   A2: { bg: "#EAF0F6", text: "#1F4A6E", border: "#BFD3E6" },

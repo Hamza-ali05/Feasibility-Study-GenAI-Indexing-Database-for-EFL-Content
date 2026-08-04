@@ -1,5 +1,3 @@
-
-
 import { useState, useEffect } from "react";
 
 import { useLocation, Link, useNavigate } from "react-router-dom";
@@ -13,7 +11,6 @@ import Menu from "@mui/material/Menu";
 import Icon from "@mui/material/Icon";
 
 import MDBox from "components/MDBox";
-import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import MDInput from "components/MDInput";
 
@@ -37,14 +34,14 @@ import {
 
 import { useAuth } from "context/AuthContext";
 
-function DashboardNavbar({ absolute, light, isMini }) {
+function DashboardNavbar({ absolute, light, isMini, hideBreadcrumbs }) {
   const [navbarType, setNavbarType] = useState();
   const [controller, dispatch] = useMaterialUIController();
   const { miniSidenav, transparentNavbar, fixedNavbar, openConfigurator, darkMode } = controller;
   const [openMenu, setOpenMenu] = useState(false);
   const route = useLocation().pathname.split("/").slice(1);
   const navigate = useNavigate();
-  const { isAuthenticated, username, logout } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
 
   useEffect(() => {
     if (fixedNavbar) {
@@ -110,9 +107,11 @@ function DashboardNavbar({ absolute, light, isMini }) {
       sx={(theme) => navbar(theme, { transparentNavbar, absolute, light, darkMode })}
     >
       <Toolbar sx={(theme) => navbarContainer(theme)}>
-        <MDBox color="inherit" mb={{ xs: 1, md: 0 }} sx={(theme) => navbarRow(theme, { isMini })}>
-          <Breadcrumbs icon="home" title={route[route.length - 1]} route={route} light={light} />
-        </MDBox>
+        {!hideBreadcrumbs && (
+          <MDBox color="inherit" mb={{ xs: 1, md: 0 }} sx={(theme) => navbarRow(theme, { isMini })}>
+            <Breadcrumbs icon="home" title={route[route.length - 1]} route={route} light={light} />
+          </MDBox>
+        )}
         {isMini ? null : (
           <MDBox sx={(theme) => navbarRow(theme, { isMini })}>
             <MDBox pr={1}>
@@ -120,20 +119,10 @@ function DashboardNavbar({ absolute, light, isMini }) {
             </MDBox>
             <MDBox color={light ? "white" : "inherit"} display="flex" alignItems="center">
               {isAuthenticated ? (
-                <MDBox
-                  display="flex"
-                  alignItems="center"
-                  gap={1}
-                  mr={1}
-                  flexWrap="wrap"
-                  justifyContent="flex-end"
-                >
-                  <MDTypography variant="button" fontWeight="medium" color="text">
-                    Signed in as {username || "admin"}
-                  </MDTypography>
+                <MDBox display="flex" alignItems="center" mr={1}>
                   <MDButton
-                    variant="outlined"
-                    color={light || darkMode ? "white" : "dark"}
+                    variant="gradient"
+                    color="primary"
                     size="small"
                     onClick={handleLogout}
                   >
@@ -192,12 +181,14 @@ DashboardNavbar.defaultProps = {
   absolute: false,
   light: false,
   isMini: false,
+  hideBreadcrumbs: false,
 };
 
 DashboardNavbar.propTypes = {
   absolute: PropTypes.bool,
   light: PropTypes.bool,
   isMini: PropTypes.bool,
+  hideBreadcrumbs: PropTypes.bool,
 };
 
 export default DashboardNavbar;

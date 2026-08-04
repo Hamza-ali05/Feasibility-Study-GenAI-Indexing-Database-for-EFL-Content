@@ -29,7 +29,7 @@ Can a generative-AI-assisted indexing database — combining sentence embeddings
 | LLM (optional) | Anthropic API (RAG + Analyzer classification) |
 | Metadata / analytics | SQLite (`metadata.db`, `analytics.db`) |
 | Frontend | React 18 (Create React App) |
-| UI kit | Material Dashboard React (MUI) |
+| UI kit | EFL IndexDB (MUI) |
 | HTTP / charts | Axios, Chart.js |
 
 ---
@@ -89,7 +89,7 @@ make pipeline-all
 
 ### Frontend setup
 
-Clone Material Dashboard React into `frontend/` (if not already present), then install and start CRA:
+Clone EFL IndexDB into `frontend/` (if not already present), then install and start CRA:
 
 ```powershell
 cd D:\Documents\Yousaf\efl-indexdb
@@ -222,7 +222,7 @@ Interactive docs when the API is running: [http://localhost:8000/docs](http://lo
 
 ## 8. Frontend Routes
 
-From `frontend/src/routes.js` (Material Dashboard sidenav + React Router):
+From `frontend/src/routes.js` (EFL IndexDB sidenav + React Router):
 
 | Route | Page | Description |
 |-------|------|-------------|
@@ -272,7 +272,7 @@ efl-indexdb/
 └── README.md
 ```
 
-`frontend/` is the [Creative Tim Material Dashboard React](https://github.com/creativetimofficial/material-dashboard-react) repository with EFL IndexDB routes, theme tokens, layouts, and API clients layered in — not a greenfield CRA app.
+`frontend/` is the [Creative Tim EFL IndexDB](https://github.com/creativetimofficial/material-dashboard-react) repository with EFL IndexDB routes, theme tokens, layouts, and API clients layered in — not a greenfield CRA app.
 
 ---
 
@@ -322,10 +322,10 @@ Selected references underpinning the feasibility design (SBERT retrieval, CEFR l
 7. Lewis, P., et al. (2020). *Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks.* NeurIPS.
 8. Anthropic. (2024–). *Claude API documentation* — https://docs.anthropic.com (RAG / classification integration).
 9. Pedregosa, F., et al. (2011). *Scikit-learn: Machine Learning in Python.* JMLR.
-10. Creative Tim. *Material Dashboard React* — https://github.com/creativetimofficial/material-dashboard-react (UI template).
+10. Creative Tim. *EFL IndexDB* — https://github.com/creativetimofficial/material-dashboard-react (UI template).
 
 ---
 
 ## License / academic use
 
-Academic prototype for **Canterbury Christ Church University** (MSc Cybersecurity feasibility study). Not a production product. Material Dashboard React retains Creative Tim’s license terms for the frontend template code.
+Academic prototype for **Canterbury Christ Church University** (MSc Cybersecurity feasibility study). Not a production product. EFL IndexDB retains Creative Tim’s license terms for the frontend template code.

@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 
@@ -310,9 +309,7 @@ function Duplicates() {
             }
             return [enriched, ...prev];
           });
-        } catch {
-
-        }
+        } catch {}
       }
     })();
   }, [liveActivityFeed]);

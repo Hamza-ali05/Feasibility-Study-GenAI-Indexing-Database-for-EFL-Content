@@ -1,10 +1,10 @@
 {
-  "name": "material-dashboard-2-react",
+  "name": "efl-indexdb",
   "version": "2.2.0",
   "private": true,
   "author": "Creative Tim",
   "license": "See license in https://www.creative-tim.com/license",
-  "description": "React version of Material Dashboard 2 by Creative Tim",
+  "description": "EFL IndexDB frontend (academic feasibility prototype)",
   "bugs": {
     "url": "https://github.com/creativetimofficial/material-dashboard-react/issues"
   },
@@ -38,6 +38,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
+    "postinstall": "node scripts/fix-stylis-sourcemap.js",
+    "format": "prettier --write \"src/**/*.{js,jsx,css,json}\"",
     "install:clean": "rm -rf node_modules/ && rm -rf package-lock.json && npm install && npm start"
   },
   "eslintConfig": {

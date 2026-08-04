@@ -1,4 +1,3 @@
-
 import { API_URL } from "./apiClient";
 
 function toWsBase(httpUrl) {
@@ -59,14 +58,10 @@ export function connectPipelineSocket(onMessage, onStatusChange) {
         if (typeof onMessage === "function") {
           onMessage(data);
         }
-      } catch (err) {
-
-      }
+      } catch (err) {}
     };
 
-    ws.onerror = () => {
-
-    };
+    ws.onerror = () => {};
 
     ws.onclose = () => {
       notifyStatus(false);
@@ -86,9 +81,7 @@ export function connectPipelineSocket(onMessage, onStatusChange) {
       if (current) {
         try {
           current.close();
-        } catch (e) {
-
-        }
+        } catch (e) {}
         current = null;
       }
     },
@@ -109,8 +102,6 @@ export function disconnectSocket(ws) {
   if (typeof ws.close === "function") {
     try {
       ws.close();
-    } catch (e) {
-
-    }
+    } catch (e) {}
   }
 }

@@ -1,4 +1,3 @@
-
 import {
   createContext,
   useCallback,
@@ -174,9 +173,7 @@ function PipelineProvider({ children }) {
       if (typeof data?.pipeline_ready === "boolean") {
         setPipelineReady(data.pipeline_ready);
       }
-    } catch (err) {
-
-    }
+    } catch (err) {}
   }, []);
 
   const mergeSummaryActivity = useCallback((recentActivity) => {

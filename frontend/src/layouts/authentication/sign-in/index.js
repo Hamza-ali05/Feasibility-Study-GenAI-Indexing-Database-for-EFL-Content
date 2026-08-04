@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 
@@ -73,7 +72,7 @@ function SignIn() {
             </MDBox>
           )}
           <MDBox component="form" role="form" onSubmit={handleSubmit}>
-            <MDBox mb={2}>
+            <MDBox mb={3} mt={1}>
               <MDInput
                 type="text"
                 label="Username"
@@ -82,9 +81,10 @@ function SignIn() {
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
                 required
+                InputLabelProps={{ shrink: true }}
               />
             </MDBox>
-            <MDBox mb={2}>
+            <MDBox mb={3}>
               <MDInput
                 type="password"
                 label="Password"
@@ -93,9 +93,10 @@ function SignIn() {
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
                 required
+                InputLabelProps={{ shrink: true }}
               />
             </MDBox>
-            <MDBox mt={4} mb={1}>
+            <MDBox mt={2} mb={1}>
               <MDButton
                 type="submit"
                 variant="gradient"

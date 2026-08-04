@@ -13,22 +13,19 @@ REM ---------- prerequisites ----------
 where python >nul 2>&1
 if errorlevel 1 (
   echo [ERROR] Python was not found on PATH. Install Python 3.11+ and retry.
-  pause
-  exit /b 1
+  goto :fail
 )
 
 where node >nul 2>&1
 if errorlevel 1 (
   echo [ERROR] Node.js was not found on PATH. Install Node.js 18+ and retry.
-  pause
-  exit /b 1
+  goto :fail
 )
 
 where npm >nul 2>&1
 if errorlevel 1 (
   echo [ERROR] npm was not found on PATH. Reinstall Node.js and retry.
-  pause
-  exit /b 1
+  goto :fail
 )
 
 echo [OK] Python:
@@ -37,59 +34,65 @@ echo [OK] Node:
 node --version
 echo.
 
-REM ---------- backend venv + deps (skip if already importable) ----------
+REM ---------- backend venv + deps ----------
 echo [1/5] Backend dependencies...
 if not exist "%ROOT%\.venv\Scripts\python.exe" (
   echo       Creating virtual environment at .venv ...
   python -m venv "%ROOT%\.venv"
   if errorlevel 1 (
     echo [ERROR] Failed to create .venv
-    pause
-    exit /b 1
+    goto :fail
   )
 )
 
-call "%ROOT%\.venv\Scripts\activate.bat"
+REM Prefer venv without calling activate.bat (avoids chcp / label side-effects)
+set "PATH=%ROOT%\.venv\Scripts;%PATH%"
+set "VIRTUAL_ENV=%ROOT%\.venv"
+set "PYTHONPATH=%ROOT%;%ROOT%\backend"
 
 set "BACKEND_READY=0"
 "%ROOT%\.venv\Scripts\python.exe" -c "import fastapi,uvicorn,pandas,numpy" >nul 2>&1
 if not errorlevel 1 set "BACKEND_READY=1"
 
 if "!BACKEND_READY!"=="1" (
-  echo [OK] Backend already installed — skipping pip install.
-) else (
-  echo       Backend packages missing — checking internet to PyPI...
-  powershell -NoProfile -Command "try { [System.Net.Dns]::GetHostEntry('files.pythonhosted.org') | Out-Null; exit 0 } catch { exit 1 }" >nul 2>&1
-  if errorlevel 1 (
-    echo.
-    echo [ERROR] Cannot reach files.pythonhosted.org ^(DNS / network^).
-    echo         pip needs internet to download packages the first time.
-    echo         Fix: check Wi-Fi/VPN/firewall, then double-click start.bat again.
-    echo.
-    pause
-    exit /b 1
-  )
-  echo       Installing backend packages ^(retries enabled^)...
-  python -m pip install --upgrade pip --retries 5 --timeout 60
-  python -m pip install -r "%ROOT%\backend\requirements.txt" --retries 5 --timeout 60
-  if errorlevel 1 (
-    echo.
-    echo [ERROR] Backend pip install failed.
-    echo         Usually this is a temporary network/DNS issue to PyPI.
-    echo         Wait a minute, confirm internet works, then run start.bat again.
-    echo         Packages already in .venv will be reused; only missing ones re-download.
-    echo.
-    pause
-    exit /b 1
-  )
-  "%ROOT%\.venv\Scripts\python.exe" -c "import fastapi,uvicorn" >nul 2>&1
-  if errorlevel 1 (
-    echo [ERROR] Install finished but fastapi/uvicorn still missing. Check the log above.
-    pause
-    exit /b 1
-  )
-  echo [OK] Backend packages installed.
+  echo [OK] Backend already installed - skipping pip install.
+  goto :backend_done
 )
+
+echo       Backend packages missing - checking internet to PyPI...
+powershell -NoProfile -Command "try { [System.Net.Dns]::GetHostEntry('files.pythonhosted.org') | Out-Null; exit 0 } catch { exit 1 }" >nul 2>&1
+if errorlevel 1 (
+  echo.
+  echo [ERROR] Cannot reach files.pythonhosted.org (DNS / network).
+  echo         pip needs internet to download packages the first time.
+  echo         Fix: check Wi-Fi/VPN/firewall, then run start.bat again.
+  echo.
+  goto :fail
+)
+
+echo       Installing backend packages (this can take several minutes)...
+echo       NOTE: Not upgrading pip in-place (that can close this window on Windows).
+"%ROOT%\.venv\Scripts\python.exe" -m pip install -r "%ROOT%\backend\requirements.txt" --retries 5 --timeout 60
+set "PIP_ERR=!ERRORLEVEL!"
+if not "!PIP_ERR!"=="0" (
+  echo.
+  echo [ERROR] Backend pip install failed (exit code !PIP_ERR!).
+  echo         Usually a temporary network/DNS issue to PyPI.
+  echo         Wait a minute, confirm internet works, then run start.bat again.
+  echo.
+  goto :fail
+)
+
+"%ROOT%\.venv\Scripts\python.exe" -c "import fastapi,uvicorn" >nul 2>&1
+if errorlevel 1 (
+  echo [ERROR] Install finished but fastapi/uvicorn still missing. Check the log above.
+  goto :fail
+)
+echo [OK] Backend packages installed.
+
+:backend_done
+echo.
+echo       Continuing to frontend / launch steps...
 echo.
 
 REM ---------- env files ----------
@@ -102,35 +105,34 @@ if not exist "%ROOT%\.env" (
 )
 
 if not exist "%ROOT%\frontend\.env" (
-  (
-    echo REACT_APP_API_URL=http://localhost:8000
-  ) > "%ROOT%\frontend\.env"
+  >"%ROOT%\frontend\.env" echo REACT_APP_API_URL=http://localhost:8000
   echo [OK] Created frontend\.env with REACT_APP_API_URL=http://localhost:8000
 )
 
-REM ---------- frontend deps (skip if already present) ----------
+REM ---------- frontend deps ----------
 echo [2/5] Frontend dependencies...
 if not exist "%ROOT%\frontend\package.json" (
-  echo [ERROR] frontend\package.json missing. Clone or copy the frontend app into frontend\
-  pause
-  exit /b 1
+  echo [ERROR] frontend\package.json missing.
+  goto :fail
 )
 
 if exist "%ROOT%\frontend\node_modules\react-scripts\package.json" (
-  echo [OK] Frontend already installed — skipping npm install.
-) else (
-  echo       Running npm install (first run may take several minutes)...
-  pushd "%ROOT%\frontend"
-  call npm install
-  if errorlevel 1 (
-    echo [ERROR] npm install failed.
-    popd
-    pause
-    exit /b 1
-  )
-  popd
-  echo [OK] Frontend packages ready.
+  echo [OK] Frontend already installed - skipping npm install.
+  goto :frontend_done
 )
+
+echo       Running npm install (first run may take several minutes)...
+pushd "%ROOT%\frontend"
+call npm.cmd install
+set "NPM_ERR=!ERRORLEVEL!"
+popd
+if not "!NPM_ERR!"=="0" (
+  echo [ERROR] npm install failed (exit code !NPM_ERR!).
+  goto :fail
+)
+echo [OK] Frontend packages ready.
+
+:frontend_done
 echo.
 
 REM ---------- existing pipeline status (do NOT re-run) ----------
@@ -146,9 +148,7 @@ if not exist "%STATE%" (
   echo.
 ) else (
   "%ROOT%\.venv\Scripts\python.exe" "%ROOT%\scripts\print_pipeline_status.py"
-  if errorlevel 1 (
-    echo [WARN] Could not print pipeline status.
-  )
+  if errorlevel 1 echo [WARN] Could not print pipeline status.
 )
 echo ------------------------------------------------------------
 echo.
@@ -194,13 +194,31 @@ if errorlevel 1 (
 )
 echo [OK] Frontend is responding.
 
-start "" "http://localhost:3000/authentication/sign-in"
+REM Prefer Firefox for the sign-in page; fall back to default browser
+where firefox >nul 2>&1
+if not errorlevel 1 (
+  start "" firefox "http://localhost:3000/authentication/sign-in"
+) else if exist "%ProgramFiles%\Mozilla Firefox\firefox.exe" (
+  start "" "%ProgramFiles%\Mozilla Firefox\firefox.exe" "http://localhost:3000/authentication/sign-in"
+) else if exist "%ProgramFiles(x86)%\Mozilla Firefox\firefox.exe" (
+  start "" "%ProgramFiles(x86)%\Mozilla Firefox\firefox.exe" "http://localhost:3000/authentication/sign-in"
+) else (
+  echo [WARN] Firefox not found on PATH - opening default browser instead.
+  start "" "http://localhost:3000/authentication/sign-in"
+)
 
 :done
 echo.
 echo ============================================================
 echo   Launch complete. Leave CMD 1 and CMD 2 open while using
-echo   the app. This setup window can be closed.
+echo   the app. You can close this setup window after pressing a key.
 echo ============================================================
 echo.
+pause
 exit /b 0
+
+:fail
+echo.
+echo Setup stopped with an error. See messages above.
+pause
+exit /b 1

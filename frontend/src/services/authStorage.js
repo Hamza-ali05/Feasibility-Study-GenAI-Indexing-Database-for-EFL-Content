@@ -1,4 +1,3 @@
-
 const TOKEN_KEY = "efl_admin_token";
 const AUTH_EVENT = "efl-auth-changed";
 

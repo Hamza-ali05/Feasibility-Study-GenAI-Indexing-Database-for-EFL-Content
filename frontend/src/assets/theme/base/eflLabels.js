@@ -1,4 +1,3 @@
-
 const SKILL_TYPES = ["Reading", "Writing", "Listening", "Speaking", "Grammar", "Vocabulary"];
 
 const TOPIC_DOMAINS = [

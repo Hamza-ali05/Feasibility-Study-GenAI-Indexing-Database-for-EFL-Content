@@ -1,6 +1,6 @@
 /**
 =========================================================
-* Material Dashboard 2 React - v2.2.0
+* EFL IndexDB - v2.2.0
 =========================================================
 
 * Product Page: https://www.creative-tim.com/product/material-dashboard-react
@@ -24,7 +24,7 @@ const inputLabel = {
     root: {
       fontSize: size.sm,
       color: text.main,
-      lineHeight: 0.9,
+      lineHeight: 1.4375,
 
       "&.Mui-focused": {
         color: info.main,
@@ -32,7 +32,9 @@ const inputLabel = {
 
       "&.MuiInputLabel-shrink": {
         lineHeight: 1.5,
-        fontSize: size.md,
+        fontSize: size.sm,
+        paddingInline: "4px",
+        backgroundColor: "#202940",
 
         "~ .MuiInputBase-root .MuiOutlinedInput-notchedOutline legend": {
           fontSize: "0.85em",
@@ -47,6 +49,8 @@ const inputLabel = {
       "&.MuiInputLabel-shrink": {
         lineHeight: 1.6,
         fontSize: size.sm,
+        paddingInline: "4px",
+        backgroundColor: "#202940",
 
         "~ .MuiInputBase-root .MuiOutlinedInput-notchedOutline legend": {
           fontSize: "0.72em",

@@ -1,4 +1,3 @@
-
 import Card from "@mui/material/Card";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -34,7 +33,7 @@ const TECH_STACK = [
   },
   {
     layer: "Frontend",
-    tech: "Material Dashboard React",
+    tech: "EFL IndexDB",
     role: "Admin and end-user UI (MUI-based dashboard template)",
   },
 ];

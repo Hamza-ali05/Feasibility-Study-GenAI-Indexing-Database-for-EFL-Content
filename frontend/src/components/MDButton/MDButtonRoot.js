@@ -1,5 +1,3 @@
-
-
 import Button from "@mui/material/Button";
 import { styled } from "@mui/material/styles";
 
@@ -13,7 +11,6 @@ export default styled(Button)(({ theme, ownerState }) => {
   const { colored } = boxShadows;
 
   const containedStyles = () => {
-
     const backgroundValue = palette[color] ? palette[color].main : white.main;
 
     const focusedBackgroundValue = palette[color] ? palette[color].focus : white.focus;
@@ -77,7 +74,6 @@ export default styled(Button)(({ theme, ownerState }) => {
   };
 
   const outliedStyles = () => {
-
     const backgroundValue = color === "white" ? rgba(white.main, 0.1) : transparent.main;
 
     const colorValue = palette[color] ? palette[color].main : white.main;
@@ -121,7 +117,6 @@ export default styled(Button)(({ theme, ownerState }) => {
   };
 
   const gradientStyles = () => {
-
     const backgroundValue =
       color === "white" || !gradients[color]
         ? white.main
@@ -174,7 +169,6 @@ export default styled(Button)(({ theme, ownerState }) => {
   };
 
   const textStyles = () => {
-
     const colorValue = palette[color] ? palette[color].main : white.main;
 
     const focusedColorValue = palette[color] ? palette[color].focus : white.focus;
@@ -197,7 +191,6 @@ export default styled(Button)(({ theme, ownerState }) => {
   });
 
   const iconOnlyStyles = () => {
-
     let sizeValue = pxToRem(38);
 
     if (size === "small") {

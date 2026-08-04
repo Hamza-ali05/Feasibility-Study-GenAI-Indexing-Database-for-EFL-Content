@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useState } from "react";
 import PropTypes from "prop-types";
 
@@ -219,9 +218,7 @@ function ManageResources() {
             topic_domain: data.topic_domain || {},
           });
         }
-      } catch {
-
-      }
+      } catch {}
     })();
     return () => {
       cancelled = true;

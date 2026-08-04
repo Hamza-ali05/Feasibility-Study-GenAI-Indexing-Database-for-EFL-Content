@@ -1,4 +1,3 @@
-
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 
@@ -143,7 +142,6 @@ function Analyzer() {
         const detail = err?.response?.data?.detail || err?.message || "Upload failed";
         setError(typeof detail === "string" ? detail : JSON.stringify(detail));
         if (status === 503) {
-
         }
       } finally {
         setProcessing(false);
@@ -153,7 +151,6 @@ function Analyzer() {
   );
 
   const handleForceKeep = async () => {
-
     if (tab === 1 && pasteText.trim()) {
       setProcessing(true);
       setError(null);

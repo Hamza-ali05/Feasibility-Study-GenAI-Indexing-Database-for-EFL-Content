@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useState } from "react";
 
 import Card from "@mui/material/Card";
@@ -86,14 +85,10 @@ function AdminOverview() {
 
   return (
     <DashboardLayout>
-      <DashboardNavbar />
+      <DashboardNavbar hideBreadcrumbs />
       <MDBox py={3}>
-        <MDTypography variant="h4" fontWeight="bold" mb={0.5}>
+        <MDTypography variant="h4" fontWeight="bold" mb={2}>
           Admin Overview
-        </MDTypography>
-        <MDTypography variant="button" color="text" mb={2} display="block">
-          Combined dashboard, analytics, and duplicate snapshot
-          {data?.admin_user ? ` · signed in as ${data.admin_user}` : ""}
         </MDTypography>
 
         {error && (

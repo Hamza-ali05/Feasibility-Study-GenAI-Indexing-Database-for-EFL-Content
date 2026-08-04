@@ -1,4 +1,3 @@
-
 import axios from "axios";
 import { TOKEN_KEY, clearToken } from "services/authStorage";
 
@@ -16,12 +15,10 @@ apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem(TOKEN_KEY);
     if (token) {
-
       config.headers.Authorization = `Bearer ${token}`;
     }
 
     if (typeof FormData !== "undefined" && config.data instanceof FormData) {
-
       delete config.headers["Content-Type"];
     }
     return config;

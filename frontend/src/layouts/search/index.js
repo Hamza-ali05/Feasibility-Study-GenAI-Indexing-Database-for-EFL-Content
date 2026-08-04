@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link as RouterLink, useSearchParams } from "react-router-dom";
 
@@ -80,9 +79,7 @@ function Search() {
             topic_domain: data.topic_domain || {},
           });
         }
-      } catch (err) {
-
-      }
+      } catch (err) {}
     })();
     return () => {
       cancelled = true;

@@ -3,7 +3,7 @@
 **Project:** Feasibility Study: GenAI Indexing Database for EFL Content
 
 This document describes how the 14-stage offline pipeline, live FastAPI services,
-FAISS/SQLite stores, Anthropic RAG path, and Material Dashboard React frontend
+FAISS/SQLite stores, Anthropic RAG path, and EFL IndexDB frontend
 fit together.
 
 ---
@@ -47,7 +47,7 @@ fit together.
                                                 │ HTTP / WS
                                                 │
                          ┌──────────────────────┴──────────────────────────┐
-                         │   Material Dashboard React (frontend/)          │
+                         │   EFL IndexDB (frontend/)          │
                          │   CRA · MUI · Axios · Chart.js · WS client      │
                          └─────────────────────────────────────────────────┘
 ```
@@ -399,4 +399,4 @@ feasibility study.
 ## Related docs
 
 - Root [`README.md`](../README.md) — quick start, API table, metrics definitions
-- [`frontend_adaptation_notes.md`](frontend_adaptation_notes.md) — Material Dashboard mapping
+- [`frontend_adaptation_notes.md`](frontend_adaptation_notes.md) — EFL IndexDB mapping

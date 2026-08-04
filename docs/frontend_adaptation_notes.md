@@ -1,7 +1,7 @@
 # Frontend adaptation notes — EFL IndexDB
 
 **Project:** Feasibility Study: GenAI Indexing Database for EFL Content  
-**Base template:** [Material Dashboard React](https://github.com/creativetimofficial/material-dashboard-react) (Creative Tim, Material Dashboard 2 React v2.2.0), cloned into `frontend/`  
+**Base template:** [EFL IndexDB](https://github.com/creativetimofficial/material-dashboard-react) (Creative Tim, EFL IndexDB v2.2.0), cloned into `frontend/`  
 **Rule:** Do not scaffold a competing frontend. Edit the cloned layout (`src/layouts`, `src/components`, `src/examples`, `src/assets/theme`, `routes.js`, `src/context`).
 
 These notes capture discovery from Phase 0 (Prompt 0-C) and the adaptation plan before any theme/route edits.
@@ -10,7 +10,7 @@ These notes capture discovery from Phase 0 (Prompt 0-C) and the adaptation plan 
 
 ## 1. Default template pages → EFL IndexDB
 
-| Material Dashboard React default | EFL IndexDB fate |
+| EFL IndexDB default | EFL IndexDB fate |
 |----------------------------------|------------------|
 | Dashboard | **Keep / repurpose** → **Dashboard** (pipeline + DB monitoring) |
 | Tables | **Repurpose** → **Browse Resources** (resource catalogue / tabular browse) |
@@ -106,7 +106,7 @@ EFL IndexDB
 
 ## 4. UI kit confirmation — Material UI (MUI) stays
 
-The frontend remains on **Material UI** via the Creative Tim Material Dashboard React kit.
+The frontend remains on **Material UI** via the Creative Tim EFL IndexDB kit.
 
 We **reuse** the shipped MD wrappers instead of inventing parallel primitives:
 

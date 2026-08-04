@@ -1,6 +1,6 @@
 /**
 =========================================================
-* Material Dashboard 2 React - v2.2.0
+* EFL IndexDB - v2.2.0
 =========================================================
 
 * Product Page: https://www.creative-tim.com/product/material-dashboard-react
@@ -47,7 +47,7 @@ const inputOutlined = {
 
     input: {
       color: grey[700],
-      padding: pxToRem(12),
+      padding: `${pxToRem(14)} ${pxToRem(12)}`,
       backgroundColor: transparent.main,
     },
 

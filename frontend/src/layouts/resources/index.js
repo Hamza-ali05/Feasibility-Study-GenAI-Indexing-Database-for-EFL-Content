@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useState } from "react";
 
 import Card from "@mui/material/Card";
@@ -74,9 +73,7 @@ function BrowseResources() {
             topic_domain: data.topic_domain || {},
           });
         }
-      } catch (err) {
-
-      }
+      } catch (err) {}
     })();
     return () => {
       cancelled = true;

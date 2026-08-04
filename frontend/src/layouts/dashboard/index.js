@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import Card from "@mui/material/Card";
@@ -119,7 +118,6 @@ function Dashboard() {
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox py={3}>
-
         <MDBox
           display="flex"
           justifyContent="space-between"

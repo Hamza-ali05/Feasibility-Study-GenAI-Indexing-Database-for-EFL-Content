@@ -1,6 +1,6 @@
 /**
 =========================================================
-* Material Dashboard 2 React - v2.2.0
+* EFL IndexDB - v2.2.0
 * EFL IndexDB palette override (Prompt 4-B)
 =========================================================
 

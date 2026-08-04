@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 
@@ -161,7 +160,6 @@ function DocumentPreviewModal({ resourceId, open, onClose }) {
             >
               {bodyParagraphs.map((para, idx) => (
                 <MDTypography
-
                   key={idx}
                   variant="body2"
                   mb={idx < bodyParagraphs.length - 1 ? 1.5 : 0}

@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import PropTypes from "prop-types";
@@ -189,7 +188,6 @@ function AskAI() {
       if (!id) return;
 
       if (payload.type === "done" && Array.isArray(payload.sources)) {
-
         patchAssistant(id, () => ({ sources: payload.sources }));
         return;
       }

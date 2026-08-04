@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import { Link as RouterLink } from "react-router-dom";
@@ -56,10 +55,8 @@ function SimpleTable({ columns, rows }) {
       </TableHead>
       <TableBody>
         {rows.map((row, i) => (
-
           <TableRow key={i}>
             {row.map((cell, j) => (
-
               <TableCell key={j}>{cell}</TableCell>
             ))}
           </TableRow>
@@ -589,12 +586,7 @@ function ExplainQualityArtifact({ enabled }) {
         </MDTypography>
       ) : (
         flags.map((f, i) => (
-          <MDBox
-
-            key={i}
-            py={0.75}
-            sx={{ borderBottom: `1px solid ${colors.grey[300]}` }}
-          >
+          <MDBox key={i} py={0.75} sx={{ borderBottom: `1px solid ${colors.grey[300]}` }}>
             <MDTypography variant="caption">
               {typeof f === "string" ? f : JSON.stringify(f)}
             </MDTypography>
