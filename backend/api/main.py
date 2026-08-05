@@ -25,6 +25,7 @@ from api.routers import (
     explain,
     metrics,
     pipeline,
+    practitioner,
     qa,
     recommend,
     resources,
@@ -32,7 +33,7 @@ from api.routers import (
 )
 from api.websocket_manager import manager as ws_manager
 from api.websocket_manager import router as ws_router
-from backend.utils.config import DATA_PROCESSED, Config
+from backend.utils.config import DATA_PROCESSED, Config, PROJECT_ROOT
 from backend.utils import pipeline_state
 
 app = FastAPI(
@@ -76,6 +77,7 @@ app.include_router(search.router, prefix="/api/search")
 app.include_router(pipeline.router, prefix="/api/pipeline")
 app.include_router(pipeline.dashboard_router, prefix="/api/dashboard")
 app.include_router(metrics.router, prefix="/api/metrics")
+app.include_router(metrics.experiments_router, prefix="/api/experiments")
 app.include_router(explain.router, prefix="/api/explain")
 app.include_router(qa.router, prefix="/api/qa")
 app.include_router(recommend.router, prefix="/api/recommend")
@@ -83,10 +85,19 @@ app.include_router(analyzer.router, prefix="/api/analyzer")
 app.include_router(analytics.router, prefix="/api/analytics")
 app.include_router(duplicates.router, prefix="/api")
 app.include_router(admin.router, prefix="/api/admin")
+app.include_router(practitioner.router, prefix="/api/practitioner")
 app.include_router(resources.router, prefix="/api/resources")
 app.include_router(ws_router)
 
 DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
+_RESEARCH_REPORTS = PROJECT_ROOT / "research" / "reports"
+_RESEARCH_REPORTS.mkdir(parents=True, exist_ok=True)
+# More-specific mount must be registered before the catch-all /static.
+app.mount(
+    "/static/research-reports",
+    StaticFiles(directory=str(_RESEARCH_REPORTS)),
+    name="research_reports",
+)
 app.mount("/static", StaticFiles(directory=str(DATA_PROCESSED)), name="static")
 
 @app.get("/health")

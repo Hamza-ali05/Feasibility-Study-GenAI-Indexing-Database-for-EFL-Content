@@ -1,0 +1,44 @@
+{
+  "questionnaire_id": "interview_guide",
+  "title": "Semi-Structured Interview Guide",
+  "preamble": "Thank you for agreeing to participate in this feasibility study. This interview explores how you currently find EFL learning materials and your experience with the EFL IndexDB prototype. There are no right or wrong answers; please speak freely. The session is audio-recorded with your consent, transcribed, and anonymised (pseudonym only). You may pause or withdraw at any time.",
+  "sections": [
+    {
+      "section": "Opening / Context",
+      "questions": [
+        "Can you describe how you currently search for EFL learning materials?",
+        "What challenges do you face when looking for resources at a specific CEFR level?"
+      ]
+    },
+    {
+      "section": "System Demonstration Response",
+      "questions": [
+        "Having seen the prototype, how does the semantic search compare to your current approach?",
+        "How useful do you find the CEFR-level filtering for your teaching context?",
+        "Were the recommended related resources relevant to what you would actually use in class?"
+      ]
+    },
+    {
+      "section": "Usability and Trust",
+      "questions": [
+        "How confident would you feel relying on the system's CEFR classification of resources?",
+        "Were there any moments where the system's output surprised you or seemed incorrect?",
+        "What would increase your trust in using this kind of AI-powered tool?"
+      ]
+    },
+    {
+      "section": "Pedagogical Value",
+      "questions": [
+        "Do you think this system would save you time in lesson preparation?",
+        "Would you recommend this tool to a colleague? Why or why not?",
+        "What features or improvements would make this tool more useful for your work?"
+      ]
+    },
+    {
+      "section": "Closing",
+      "questions": [
+        "Is there anything else you would like to add about your experience with the prototype?"
+      ]
+    }
+  ]
+}

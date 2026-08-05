@@ -1,5 +1,6 @@
 ROOT := $(abspath ..)
-export PYTHONPATH := $(ROOT)
+# Repo root for backend.*; backend/ for api.* (matches start.bat / run_backend.bat)
+export PYTHONPATH := $(ROOT)$(if $(filter $(OS),Windows_NT),;,:)$(ROOT)/backend
 PYTHON ?= python
 PYTEST ?= pytest
 PIP ?= pip
@@ -7,7 +8,7 @@ UVICORN ?= uvicorn
 
 .PHONY: install discover load integrate eda clean split preprocess balance \
 	train evaluate explain-global explain-local explain-quality predict \
-	pipeline-all api test hash-password
+	pipeline-all pipeline-repro-note api test hash-password
 
 install:
 	$(PIP) install -r requirements.txt
@@ -54,11 +55,17 @@ explain-quality:
 predict:
 	cd $(ROOT) && $(PYTHON) -m backend.pipeline.stage_14_predict
 
-pipeline-all: discover load integrate eda clean split preprocess balance \
+pipeline-repro-note:
+	@echo ============================================================
+	@echo   A reproducibility snapshot will be captured automatically
+	@echo   at the start of Discover (seed, packages, dataset hash).
+	@echo ============================================================
+
+pipeline-all: pipeline-repro-note discover load integrate eda clean split preprocess balance \
 	train evaluate explain-global explain-local explain-quality predict
 
 api:
-	cd $(ROOT) && $(UVICORN) backend.api.main:app --reload --port 8000
+	cd $(ROOT) && $(UVICORN) backend.api.main:app --reload --host 127.0.0.1 --port 8000 --reload-dir $(ROOT)/backend --reload-dir $(ROOT)/research
 
 test:
 	cd $(ROOT) && $(PYTEST) tests/ -v

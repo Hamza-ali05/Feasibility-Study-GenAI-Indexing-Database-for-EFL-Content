@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 
 import faiss
 import joblib
@@ -114,42 +115,277 @@ def _average_precision(retrieved: list[str], relevant: set[str], k: int) -> floa
         return 0.0
     return sum_prec / min(len(relevant), k)
 
+
+def _mrr(retrieved: list[str], relevant: set[str], k: int) -> float:
+    for i, rid in enumerate(retrieved[:k], start=1):
+        if rid in relevant:
+            return 1.0 / i
+    return 0.0
+
+
 def _aggregate_retrieval(
     retrieved_lists: list[list[str]],
     relevant_sets: list[set[str]],
-    k: int,
+    k: int = 10,
 ) -> dict[str, float]:
-    precs, recalls, maps, f1s = [], [], [], []
+    """Aggregate retrieval metrics at k=5 and k (default 10)."""
+    ks = sorted({5, int(k)})
+    buckets: dict[int, dict[str, list[float]]] = {
+        kk: {"p": [], "r": [], "ap": [], "f1": [], "mrr": []} for kk in ks
+    }
     evaluated = 0
     for retrieved, relevant in zip(retrieved_lists, relevant_sets):
         if not relevant:
             continue
         evaluated += 1
-        p = _precision_at_k(retrieved, relevant, k)
-        r = _recall_at_k(retrieved, relevant, k)
-        ap = _average_precision(retrieved, relevant, k)
-        precs.append(p)
-        recalls.append(r)
-        maps.append(ap)
-        f1s.append(_f1_at_k(p, r))
+        for kk in ks:
+            p = _precision_at_k(retrieved, relevant, kk)
+            r = _recall_at_k(retrieved, relevant, kk)
+            ap = _average_precision(retrieved, relevant, kk)
+            buckets[kk]["p"].append(p)
+            buckets[kk]["r"].append(r)
+            buckets[kk]["ap"].append(ap)
+            buckets[kk]["f1"].append(_f1_at_k(p, r))
+            buckets[kk]["mrr"].append(_mrr(retrieved, relevant, kk))
 
     if evaluated == 0:
         logger.warning("No queries with non-empty relevance sets; retrieval metrics are 0")
-        return {
-            "precision_at_10": 0.0,
-            "recall_at_10": 0.0,
-            "map": 0.0,
-            "f1_at_10": 0.0,
-            "queries_evaluated": 0,
-        }
+        out: dict[str, float] = {"queries_evaluated": 0, "map": 0.0, "mrr": 0.0}
+        for kk in ks:
+            out[f"precision_at_{kk}"] = 0.0
+            out[f"recall_at_{kk}"] = 0.0
+            out[f"f1_at_{kk}"] = 0.0
+        return out
 
-    return {
-        "precision_at_10": float(np.mean(precs)),
-        "recall_at_10": float(np.mean(recalls)),
-        "map": float(np.mean(maps)),
-        "f1_at_10": float(np.mean(f1s)),
+    primary_k = max(ks)
+    out = {
         "queries_evaluated": evaluated,
+        "map": float(np.mean(buckets[primary_k]["ap"])),
+        "mrr": float(np.mean(buckets[primary_k]["mrr"])),
     }
+    for kk in ks:
+        out[f"precision_at_{kk}"] = float(np.mean(buckets[kk]["p"]))
+        out[f"recall_at_{kk}"] = float(np.mean(buckets[kk]["r"]))
+        out[f"f1_at_{kk}"] = float(np.mean(buckets[kk]["f1"]))
+    return out
+
+
+def _per_query_metrics(
+    retrieved_lists: list[list[str]],
+    relevant_sets: list[set[str]],
+    query_ids: list[str],
+    k: int = 10,
+) -> list[dict]:
+    """Per-query precision/recall (and related) for paired significance tests."""
+    ks = sorted({5, int(k)})
+    rows: list[dict] = []
+    for qid, retrieved, relevant in zip(query_ids, retrieved_lists, relevant_sets):
+        if not relevant:
+            continue
+        row: dict = {
+            "query_id": str(qid),
+            "n_relevant": len(relevant),
+        }
+        for kk in ks:
+            p = _precision_at_k(retrieved, relevant, kk)
+            r = _recall_at_k(retrieved, relevant, kk)
+            row[f"precision_at_{kk}"] = float(p)
+            row[f"recall_at_{kk}"] = float(r)
+            row[f"f1_at_{kk}"] = float(_f1_at_k(p, r))
+            row[f"ap_at_{kk}"] = float(_average_precision(retrieved, relevant, kk))
+            row[f"mrr_at_{kk}"] = float(_mrr(retrieved, relevant, kk))
+        rows.append(row)
+    return rows
+
+
+def _per_class_f1_from_cm(cm: list[list[int]], labels: list[str]) -> dict[str, float]:
+    mat = np.asarray(cm, dtype=float)
+    out: dict[str, float] = {}
+    for i, label in enumerate(labels):
+        if i >= mat.shape[0]:
+            break
+        tp = mat[i, i]
+        fp = mat[:, i].sum() - tp
+        fn = mat[i, :].sum() - tp
+        precision = tp / (tp + fp) if (tp + fp) else 0.0
+        recall = tp / (tp + fn) if (tp + fn) else 0.0
+        f1 = (
+            2 * precision * recall / (precision + recall)
+            if (precision + recall)
+            else 0.0
+        )
+        out[str(label)] = float(f1)
+    return out
+
+
+def _apply_metadata_filters(
+    retrieved_lists: list[list[str]],
+    query_df: pd.DataFrame,
+    corpus_df: pd.DataFrame,
+    k: int,
+) -> list[list[str]]:
+    """Post-filter FAISS hits by CEFR / skill / topic match with the query."""
+    meta = corpus_df.set_index(corpus_df["resource_id"].astype(str), drop=False)
+    filtered: list[list[str]] = []
+    for (_, qrow), hits in zip(query_df.iterrows(), retrieved_lists):
+        kept: list[str] = []
+        q_cefr = qrow.get("cefr_level")
+        q_skill = qrow.get("skill_type")
+        q_topic = qrow.get("topic_domain")
+        for rid in hits:
+            if rid not in meta.index:
+                continue
+            crow = meta.loc[rid]
+            if isinstance(crow, pd.DataFrame):
+                crow = crow.iloc[0]
+            if pd.notna(q_cefr) and str(crow.get("cefr_level")) != str(q_cefr):
+                continue
+            if pd.notna(q_skill) and str(crow.get("skill_type")) != str(q_skill):
+                continue
+            if pd.notna(q_topic) and str(crow.get("topic_domain")) != str(q_topic):
+                continue
+            kept.append(str(rid))
+            if len(kept) >= k:
+                break
+        # If filters removed everything, fall back to unfiltered top-k
+        filtered.append(kept if kept else list(hits[:k]))
+    return filtered
+
+
+def _try_experiment_tracker():
+    """Return (ExperimentTracker, ExperimentConfig) or (None, None)."""
+    try:
+        from research.experiment_tracker import ExperimentConfig, ExperimentTracker
+
+        return ExperimentTracker(), ExperimentConfig
+    except Exception as exc:  # noqa: BLE001 — pipeline must not fail
+        logger.warning("ExperimentTracker unavailable; skipping experiment log: %s", exc)
+        return None, None
+
+
+def _get_or_create_named_experiment(et, ExperimentConfig, name: str, description: str, config: dict):
+    for exp in et.list_experiments():
+        if exp.name == name:
+            return exp
+    return et.create_experiment(
+        name=name,
+        description=description,
+        config=ExperimentConfig(**config),
+    )
+
+
+def _results_payload(
+    retrieval: dict,
+    classification: dict,
+    confusion_matrix: list[list[int]] | None,
+    labels: list[str] | None,
+) -> dict:
+    return {
+        "retrieval": {
+            "precision_at_k": retrieval.get("precision_at_10"),
+            "recall_at_k": retrieval.get("recall_at_10"),
+            "map": retrieval.get("map"),
+            "f1_at_k": retrieval.get("f1_at_10"),
+            "mrr": retrieval.get("mrr"),
+        },
+        "classification": {
+            "accuracy": classification.get("accuracy"),
+            "precision_macro": classification.get("precision_macro"),
+            "recall_macro": classification.get("recall_macro"),
+            "f1_macro": classification.get("f1_macro"),
+        },
+        "confusion_matrix": confusion_matrix,
+        "per_class_f1": (
+            _per_class_f1_from_cm(confusion_matrix, labels)
+            if confusion_matrix and labels
+            else None
+        ),
+    }
+
+
+def _record_baseline_experiments(
+    sbert_retrieval: dict,
+    tfidf_retrieval: dict,
+    sbert_clf_metrics: dict,
+    tfidf_clf_metrics: dict,
+    cm_sbert: list,
+    cm_tfidf: list,
+) -> None:
+    """Auto-register SBERT / TF-IDF experiments and export comparison table."""
+    et, ExperimentConfig = _try_experiment_tracker()
+    if et is None:
+        return
+
+    from backend.utils.config import Config
+
+    sbert_exp = _get_or_create_named_experiment(
+        et,
+        ExperimentConfig,
+        name="SBERT Semantic Retrieval",
+        description="Pipeline Stage 10 SBERT + FAISS semantic retrieval baseline",
+        config={
+            "retrieval_method": "sbert",
+            "embedding_model": getattr(Config, "SBERT_MODEL", None)
+            or "sentence-transformers/all-MiniLM-L6-v2",
+            "classifier": "logistic_regression",
+            "faiss_index_type": "IndexFlatIP",
+            "metadata_filters_enabled": False,
+            "rag_enabled": False,
+            "top_k": K,
+            "random_seed": 42,
+        },
+    )
+    tfidf_exp = _get_or_create_named_experiment(
+        et,
+        ExperimentConfig,
+        name="TF-IDF Baseline Retrieval",
+        description="Pipeline Stage 10 classical TF-IDF cosine retrieval baseline",
+        config={
+            "retrieval_method": "tfidf",
+            "embedding_model": None,
+            "classifier": "logistic_regression",
+            "faiss_index_type": None,
+            "metadata_filters_enabled": False,
+            "rag_enabled": False,
+            "top_k": K,
+            "random_seed": 42,
+        },
+    )
+
+    et.start_experiment(sbert_exp.experiment_id)
+    et.record_results(
+        sbert_exp.experiment_id,
+        _results_payload(
+            sbert_retrieval,
+            sbert_clf_metrics,
+            cm_sbert,
+            sbert_clf_metrics.get("labels"),
+        ),
+    )
+
+    et.start_experiment(tfidf_exp.experiment_id)
+    et.record_results(
+        tfidf_exp.experiment_id,
+        _results_payload(
+            tfidf_retrieval,
+            tfidf_clf_metrics,
+            cm_tfidf,
+            tfidf_clf_metrics.get("labels"),
+        ),
+    )
+
+    out_dir = Path(__file__).resolve().parents[2] / "research" / "reports" / "experiments"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    et.export_comparison_table(
+        [sbert_exp.experiment_id, tfidf_exp.experiment_id],
+        out_dir,
+    )
+    msg = (
+        "Experiment results recorded. Comparison table exported to "
+        "research/reports/experiments/"
+    )
+    print(msg)
+    logger.info(msg)
 
 def _faiss_retrieve(
     index: faiss.Index,
@@ -164,9 +400,11 @@ def _faiss_retrieve(
     for row in indices:
         ids = []
         for j in row.tolist():
-            if j < 0:
+            if j < 0 or j >= len(faiss_row_to_id):
                 continue
-            ids.append(faiss_row_to_id[j])
+            rid = faiss_row_to_id[j]
+            if rid:
+                ids.append(rid)
         results.append(ids)
     return results
 
@@ -240,8 +478,17 @@ def run() -> dict:
         with FAISS_ID_MAP_PATH.open("r", encoding="utf-8") as fh:
             id_map = json.load(fh)
 
-        faiss_row_to_id = [id_map[str(i)]["resource_id"] for i in range(len(corpus_ids))]
         index = faiss.read_index(str(FAISS_INDEX_PATH))
+        ntotal = int(index.ntotal)
+        faiss_row_to_id = []
+        for i in range(ntotal):
+            entry = id_map.get(str(i)) or id_map.get(i)
+            if entry is None:
+                faiss_row_to_id.append("")
+            elif isinstance(entry, dict):
+                faiss_row_to_id.append(str(entry.get("resource_id") or ""))
+            else:
+                faiss_row_to_id.append(str(entry))
 
         sbert_clf = joblib.load(SBERT_MODEL_PATH)
         tfidf_clf = joblib.load(TFIDF_CLF_PATH)
@@ -339,6 +586,18 @@ def run() -> dict:
             json.dump(report, fh, indent=2)
             fh.write("\n")
         logger.info("wrote evaluation report → %s", REPORT_PATH)
+
+        try:
+            _record_baseline_experiments(
+                sbert_retrieval,
+                tfidf_retrieval,
+                sbert_clf_metrics,
+                tfidf_clf_metrics,
+                cm_sbert,
+                cm_tfidf,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Experiment tracking failed (non-fatal): %s", exc)
 
         pipeline_state.mark_complete(STAGE_NAME)
         return report

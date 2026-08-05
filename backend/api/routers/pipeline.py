@@ -111,6 +111,7 @@ def _spawn_stage(stage: str) -> subprocess.Popen:
         stderr=subprocess.DEVNULL,
     )
 
+
 def _wait_for_terminal(stage: str, timeout: float = STAGE_TIMEOUT_SEC) -> str:
     """Poll until COMPLETE or FAILED (or timeout → FAILED)."""
     deadline = time.time() + timeout
@@ -129,9 +130,11 @@ def _wait_for_terminal(stage: str, timeout: float = STAGE_TIMEOUT_SEC) -> str:
     )
     return pipeline_state.STATUS_FAILED
 
+
 def _run_all_worker() -> None:
     global _run_all_active
     try:
+        pipeline_state.capture_run_metadata()
         for stage in pipeline_state.STAGES_IN_ORDER:
             statuses = pipeline_state.get_all_statuses()
             if statuses[stage]["status"] == pipeline_state.STATUS_COMPLETE:
@@ -144,10 +147,12 @@ def _run_all_worker() -> None:
                 logger.error("run-all: stopping — %s ended as %s", stage, final)
                 return
             logger.info("run-all: %s COMPLETE", stage)
+        pipeline_state.sync_snapshot_runtime()
         logger.info("run-all: all stages finished")
     finally:
         with _run_all_lock:
             _run_all_active = False
+
 
 @router.get("/status", response_model=PipelineStatus)
 def get_status() -> PipelineStatus:
@@ -159,6 +164,8 @@ def get_status() -> PipelineStatus:
             run_at=statuses[name].get("run_at"),
             progress_pct=statuses[name].get("progress_pct"),
             error=statuses[name].get("error"),
+            duration_seconds=statuses[name].get("duration_seconds"),
+            started_at=statuses[name].get("started_at"),
         )
         for name in pipeline_state.STAGES_IN_ORDER
     ]
@@ -167,6 +174,25 @@ def get_status() -> PipelineStatus:
         current_stage=pipeline_state.get_current_stage() or "",
         pipeline_ready=pipeline_state.is_pipeline_ready(),
     )
+
+
+@router.get("/reproducibility")
+def get_reproducibility() -> dict[str, Any]:
+    """Return the latest reproducibility snapshot for the Pipeline Monitor."""
+    snap = pipeline_state.get_latest_reproducibility_snapshot()
+    if snap is None:
+        # Capture on demand so the UI has something to show
+        pipeline_state.capture_run_metadata()
+        snap = pipeline_state.get_latest_reproducibility_snapshot()
+    if snap is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "No reproducibility snapshot found. "
+                "Run Discover or any pipeline stage to create one."
+            ),
+        )
+    return snap
 
 def _read_artifact_json(slug: str) -> dict[str, Any]:
     path = ARTIFACT_FILES.get(slug)
@@ -236,6 +262,7 @@ def run_stage(
             status_code=409,
             detail=f"Stage '{stage}' is already RUNNING.",
         )
+    pipeline_state.capture_run_metadata()
     _spawn_stage(stage)
     return {"message": f"Stage '{stage}' started", "stage": stage}
 

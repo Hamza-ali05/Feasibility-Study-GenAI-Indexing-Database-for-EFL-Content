@@ -6,7 +6,14 @@ import Accordion from "@mui/material/Accordion";
 import AccordionDetails from "@mui/material/AccordionDetails";
 import AccordionSummary from "@mui/material/AccordionSummary";
 import Card from "@mui/material/Card";
+import Checkbox from "@mui/material/Checkbox";
+import CircularProgress from "@mui/material/CircularProgress";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import Grid from "@mui/material/Grid";
+import Link from "@mui/material/Link";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemText from "@mui/material/ListItemText";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import Table from "@mui/material/Table";
@@ -31,6 +38,8 @@ import {
   getExplainGlobal,
   getExplainLocal,
   getExplainQuality,
+  exportPublicationMetrics,
+  listPublicationMetricFiles,
 } from "services/endpoints";
 import { API_URL } from "services/apiClient";
 import colors from "assets/theme/base/colors";
@@ -691,6 +700,20 @@ function Metrics() {
   const [missing, setMissing] = useState(false);
   const [error, setError] = useState(null);
 
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState(null);
+  const [exportMsg, setExportMsg] = useState(null);
+  const [exportFiles, setExportFiles] = useState([]);
+
+  const loadExportFiles = async () => {
+    try {
+      const res = await listPublicationMetricFiles();
+      setExportFiles(Array.isArray(res?.files) ? res.files : []);
+    } catch {
+      /* listing is optional until admin is signed in / files exist */
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -713,22 +736,139 @@ function Metrics() {
         if (!cancelled) setLoading(false);
       }
     })();
+    loadExportFiles();
     return () => {
       cancelled = true;
     };
   }, []);
 
+  const onExport = async () => {
+    setExporting(true);
+    setExportError(null);
+    setExportMsg(null);
+    try {
+      const res = await exportPublicationMetrics();
+      setExportMsg(`Generated ${res.files_generated} file(s) in ${res.output_dir}.`);
+      await loadExportFiles();
+    } catch (err) {
+      const detail = err?.response?.data?.detail || err?.message || "Export failed";
+      setExportError(typeof detail === "string" ? detail : JSON.stringify(detail));
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const fileDownloadHref = (file) => {
+    if (file?.download_url) return staticUrl(file.download_url);
+    if (file?.filename) {
+      return staticUrl(`/static/research-reports/metrics/${file.filename}`);
+    }
+    return "#";
+  };
+
+  const formatSize = (bytes) => {
+    const n = Number(bytes) || 0;
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   return (
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox py={3}>
-        <MDTypography variant="h4" fontWeight="bold" mb={0.5}>
-          Metrics & Explainability
-        </MDTypography>
-        <MDTypography variant="button" color="text" mb={2} display="block">
-          Evaluation metrics and model explanations
-          {data?.evaluation_run_at ? ` · eval run at ${data.evaluation_run_at}` : ""}
-        </MDTypography>
+        <MDBox
+          display="flex"
+          justifyContent="space-between"
+          alignItems="flex-start"
+          flexWrap="wrap"
+          gap={1}
+          mb={2}
+        >
+          <MDBox>
+            <MDTypography variant="h4" fontWeight="bold" mb={0.5}>
+              Metrics & Explainability
+            </MDTypography>
+            <MDTypography variant="button" color="text" display="block">
+              Evaluation metrics and model explanations
+              {data?.evaluation_run_at ? ` · eval run at ${data.evaluation_run_at}` : ""}
+            </MDTypography>
+          </MDBox>
+          <MDButton
+            variant="gradient"
+            color="primary"
+            size="small"
+            disabled={exporting}
+            onClick={onExport}
+          >
+            {exporting ? (
+              <MDBox display="inline-flex" alignItems="center" gap={1}>
+                <CircularProgress size={14} color="inherit" />
+                Exporting…
+              </MDBox>
+            ) : (
+              "Export Publication Tables"
+            )}
+          </MDButton>
+        </MDBox>
+
+        {exportError && (
+          <MDBox mb={2}>
+            <MDAlert color="error">{exportError}</MDAlert>
+          </MDBox>
+        )}
+        {exportMsg && (
+          <MDBox mb={2}>
+            <MDAlert color="success">{exportMsg}</MDAlert>
+          </MDBox>
+        )}
+
+        {exportFiles.length > 0 && (
+          <Card sx={{ p: 2, mb: 2 }}>
+            <MDTypography variant="h6" mb={1}>
+              Publication exports ({exportFiles.length})
+            </MDTypography>
+            <MDTypography variant="caption" color="text" display="block" mb={1}>
+              Download CSV / LaTeX / PNG tables for the dissertation (admin session required to
+              regenerate).
+            </MDTypography>
+            <List dense disablePadding>
+              {exportFiles.map((file) => (
+                <ListItem
+                  key={file.filename || file.path}
+                  disableGutters
+                  secondaryAction={
+                    <MDTypography variant="caption" color="text">
+                      {formatSize(file.size)}
+                    </MDTypography>
+                  }
+                >
+                  <FormControlLabel
+                    control={<Checkbox defaultChecked size="small" disableRipple />}
+                    label={
+                      <ListItemText
+                        primary={
+                          <Link
+                            href={fileDownloadHref(file)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            underline="hover"
+                          >
+                            {file.filename}
+                          </Link>
+                        }
+                        secondary={
+                          file.last_modified ? `Modified ${file.last_modified}` : undefined
+                        }
+                      />
+                    }
+                    sx={{ alignItems: "flex-start", m: 0, width: "100%" }}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </Card>
+        )}
 
         <Card>
           <Tabs

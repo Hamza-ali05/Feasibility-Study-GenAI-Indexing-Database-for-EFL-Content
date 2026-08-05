@@ -50,8 +50,45 @@ export async function getPipelineArtifact(slug) {
   return data;
 }
 
+export async function getPipelineReproducibility() {
+  const { data } = await apiClient.get("/api/pipeline/reproducibility");
+  return data;
+}
+
 export async function getMetrics() {
   const { data } = await apiClient.get("/api/metrics/");
+  return data;
+}
+
+export async function exportPublicationMetrics() {
+  const { data } = await apiClient.post("/api/metrics/export");
+  return data;
+}
+
+export async function listPublicationMetricFiles() {
+  const { data } = await apiClient.get("/api/metrics/export/files");
+  return data;
+}
+
+export async function listExperiments() {
+  const { data } = await apiClient.get("/api/experiments/");
+  return data;
+}
+
+export async function getExperiment(id) {
+  const { data } = await apiClient.get(`/api/experiments/${encodeURIComponent(id)}`);
+  return data;
+}
+
+export async function runExperiment(payload) {
+  const { data } = await apiClient.post("/api/experiments/run", payload);
+  return data;
+}
+
+export async function exportExperimentComparison(experimentIds) {
+  const { data } = await apiClient.post("/api/experiments/export-comparison", {
+    experiment_ids: experimentIds,
+  });
   return data;
 }
 
@@ -218,5 +255,74 @@ export async function adminResetAllPipeline() {
 
 export async function adminDeleteResource(id) {
   const { data } = await apiClient.delete(`/api/admin/resources/${id}`);
+  return data;
+}
+
+// ── Practitioner Evaluation (admin) ───────────────────────────────────
+
+export async function getPractitionerParticipants() {
+  const { data } = await apiClient.get("/api/practitioner/participants");
+  return data;
+}
+
+export async function createPractitionerParticipant(payload) {
+  const { data } = await apiClient.post("/api/practitioner/participants", payload);
+  return data;
+}
+
+export async function updatePractitionerStatus(participantId, status) {
+  const { data } = await apiClient.patch(
+    `/api/practitioner/participants/${encodeURIComponent(participantId)}/status`,
+    { status }
+  );
+  return data;
+}
+
+export async function withdrawPractitioner(participantId) {
+  const { data } = await apiClient.post(
+    `/api/practitioner/participants/${encodeURIComponent(participantId)}/withdraw`
+  );
+  return data;
+}
+
+export async function getPractitionerQuestionnaires() {
+  const { data } = await apiClient.get("/api/practitioner/questionnaires");
+  return data;
+}
+
+export async function getPractitionerQuestionnaire(id) {
+  const { data } = await apiClient.get(
+    `/api/practitioner/questionnaires/${encodeURIComponent(id)}`
+  );
+  return data;
+}
+
+export async function storePractitionerResponse(payload) {
+  const { data } = await apiClient.post("/api/practitioner/responses", payload);
+  return data;
+}
+
+export async function getPractitionerSusSummary() {
+  const { data } = await apiClient.get("/api/practitioner/sus-summary");
+  return data;
+}
+
+export async function getPractitionerRecruitmentSummary() {
+  const { data } = await apiClient.get("/api/practitioner/recruitment-summary");
+  return data;
+}
+
+export async function getPractitionerThematicSummary() {
+  const { data } = await apiClient.get("/api/practitioner/thematic-summary");
+  return data;
+}
+
+export async function getPractitionerReport() {
+  const { data } = await apiClient.get("/api/practitioner/report");
+  return data;
+}
+
+export async function exportPractitionerReports() {
+  const { data } = await apiClient.post("/api/practitioner/export");
   return data;
 }

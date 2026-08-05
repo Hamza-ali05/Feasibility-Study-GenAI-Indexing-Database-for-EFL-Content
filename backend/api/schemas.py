@@ -36,6 +36,8 @@ class StageStatusItem(BaseModel):
     run_at: str | None = None
     progress_pct: float | None = None
     error: str | None = None
+    duration_seconds: float | None = None
+    started_at: str | None = None
 
 class PipelineStatus(BaseModel):
     stages: list[StageStatusItem]

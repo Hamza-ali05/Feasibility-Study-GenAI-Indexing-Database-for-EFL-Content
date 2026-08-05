@@ -65,20 +65,31 @@ copy backend\.env.example .env
 # Edit .env — set JWT_SECRET, ADMIN_PASSWORD_HASH, optional ANTHROPIC_API_KEY
 ```
 
-Run the API (from repo root, with venv active):
+Run the API (from **repo root**, with venv active — not from `backend\`):
 
 ```powershell
 cd D:\Documents\Yousaf\efl-indexdb
 $env:PYTHONPATH="D:\Documents\Yousaf\efl-indexdb;D:\Documents\Yousaf\efl-indexdb\backend"
-uvicorn backend.api.main:app --reload --port 8000
+uvicorn backend.api.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Or via Make (from `backend/`):
+Or use the launcher scripts (recommended on Windows):
+
+```powershell
+cd D:\Documents\Yousaf\efl-indexdb
+.\start.bat
+# or backend only:
+.\scripts\run_backend.bat
+```
+
+Or via Make (from `backend/` — Make cds to the repo root for you):
 
 ```powershell
 cd D:\Documents\Yousaf\efl-indexdb\backend
 make api
 ```
+
+> **Windows tip:** Running `uvicorn backend.api.main:app` while your cwd is `backend\` without `PYTHONPATH` set to the repo root raises `ModuleNotFoundError: No module named 'backend'`. Always start from the repo root (or use `run_backend.bat` / `make api`).
 
 Run the full 14-stage pipeline after datasets are in place:
 

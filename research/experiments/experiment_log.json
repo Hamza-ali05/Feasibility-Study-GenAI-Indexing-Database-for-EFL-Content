@@ -1,0 +1,247 @@
+{
+  "experiments": [
+    {
+      "experiment_id": "29c79c00-7d9d-4af7-a712-0b2cd0a7ec23",
+      "name": "Experiment 3: SBERT + Metadata",
+      "description": "Test retrieval with metadata post-filters",
+      "config": {
+        "retrieval_method": "sbert_metadata",
+        "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+        "classifier": "logistic_regression",
+        "faiss_index_type": "IndexFlatIP",
+        "metadata_filters_enabled": true,
+        "rag_enabled": false,
+        "top_k": 10,
+        "random_seed": 42,
+        "custom_params": {
+          "candidate_pool": 50
+        }
+      },
+      "dataset_info": {
+        "total_resources": 27077,
+        "train_size": 18953,
+        "val_size": 4062,
+        "test_size": 4062,
+        "dataset_hash": "a1e085127bd633e7"
+      },
+      "results": null,
+      "environment": {},
+      "started_at": "2026-08-05T11:59:52.793875+00:00",
+      "completed_at": "2026-08-05T11:59:59.330092+00:00",
+      "status": "failed",
+      "notes": "[FAILED] list index out of range"
+    },
+    {
+      "experiment_id": "67809dfe-dbb6-4633-8355-4d52e46b2914",
+      "name": "Experiment 3: SBERT + Metadata",
+      "description": "Test retrieval with metadata post-filters",
+      "config": {
+        "retrieval_method": "sbert_metadata",
+        "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+        "classifier": "logistic_regression",
+        "faiss_index_type": "IndexFlatIP",
+        "metadata_filters_enabled": true,
+        "rag_enabled": false,
+        "top_k": 10,
+        "random_seed": 42,
+        "custom_params": {
+          "candidate_pool": 50
+        }
+      },
+      "dataset_info": {
+        "total_resources": 27077,
+        "train_size": 18953,
+        "val_size": 4062,
+        "test_size": 4062,
+        "dataset_hash": "a1e085127bd633e7"
+      },
+      "results": {
+        "retrieval": {
+          "precision_at_k": 0.3768343815513627,
+          "recall_at_k": 0.010589163590276703,
+          "map": 0.25829115503643807,
+          "f1_at_k": 0.019668977550447598,
+          "mrr": 0.4960887324881036
+        },
+        "classification": {
+          "accuracy": 0.5435684647302904,
+          "precision_macro": 0.5649150654413811,
+          "recall_macro": 0.5290628599139237,
+          "f1_macro": 0.5324167981368793
+        },
+        "confusion_matrix": [
+          [
+            34,
+            9,
+            0,
+            2,
+            0,
+            0
+          ],
+          [
+            9,
+            29,
+            3,
+            1,
+            0,
+            0
+          ],
+          [
+            2,
+            3,
+            10,
+            20,
+            3,
+            1
+          ],
+          [
+            0,
+            4,
+            3,
+            28,
+            10,
+            2
+          ],
+          [
+            0,
+            0,
+            2,
+            17,
+            11,
+            3
+          ],
+          [
+            0,
+            0,
+            1,
+            4,
+            11,
+            19
+          ]
+        ],
+        "per_class_f1": {
+          "A1": 0.7555555555555555,
+          "A2": 0.6666666666666666,
+          "B1": 0.3448275862068965,
+          "B2": 0.4705882352941177,
+          "C1": 0.3235294117647059,
+          "C2": 0.6333333333333332
+        }
+      },
+      "environment": {
+        "note": "reproducibility module (Phase 12) not available; environment snapshot deferred",
+        "captured_at": "2026-08-05T12:01:24.064753+00:00"
+      },
+      "started_at": "2026-08-05T12:00:43.105608+00:00",
+      "completed_at": "2026-08-05T12:01:24.069860+00:00",
+      "status": "failed",
+      "notes": "[FAILED] 'charmap' codec can't encode character '\\u2192' in position 34: character maps to <undefined>"
+    },
+    {
+      "experiment_id": "1150eca0-aaa1-4676-9e90-b8b45f856777",
+      "name": "Experiment 3: SBERT + Metadata",
+      "description": "Test retrieval with metadata post-filters",
+      "config": {
+        "retrieval_method": "sbert_metadata",
+        "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+        "classifier": "logistic_regression",
+        "faiss_index_type": "IndexFlatIP",
+        "metadata_filters_enabled": true,
+        "rag_enabled": false,
+        "top_k": 10,
+        "random_seed": 42,
+        "custom_params": {
+          "candidate_pool": 50
+        }
+      },
+      "dataset_info": {
+        "total_resources": 27077,
+        "train_size": 18953,
+        "val_size": 4062,
+        "test_size": 4062,
+        "dataset_hash": "a1e085127bd633e7"
+      },
+      "results": {
+        "retrieval": {
+          "precision_at_k": 0.3768343815513627,
+          "recall_at_k": 0.010589163590276703,
+          "map": 0.25829115503643807,
+          "f1_at_k": 0.019668977550447598,
+          "mrr": 0.4960887324881036
+        },
+        "classification": {
+          "accuracy": 0.5435684647302904,
+          "precision_macro": 0.5649150654413811,
+          "recall_macro": 0.5290628599139237,
+          "f1_macro": 0.5324167981368793
+        },
+        "confusion_matrix": [
+          [
+            34,
+            9,
+            0,
+            2,
+            0,
+            0
+          ],
+          [
+            9,
+            29,
+            3,
+            1,
+            0,
+            0
+          ],
+          [
+            2,
+            3,
+            10,
+            20,
+            3,
+            1
+          ],
+          [
+            0,
+            4,
+            3,
+            28,
+            10,
+            2
+          ],
+          [
+            0,
+            0,
+            2,
+            17,
+            11,
+            3
+          ],
+          [
+            0,
+            0,
+            1,
+            4,
+            11,
+            19
+          ]
+        ],
+        "per_class_f1": {
+          "A1": 0.7555555555555555,
+          "A2": 0.6666666666666666,
+          "B1": 0.3448275862068965,
+          "B2": 0.4705882352941177,
+          "C1": 0.3235294117647059,
+          "C2": 0.6333333333333332
+        }
+      },
+      "environment": {
+        "note": "reproducibility module (Phase 12) not available; environment snapshot deferred",
+        "captured_at": "2026-08-05T12:02:47.360987+00:00"
+      },
+      "started_at": "2026-08-05T12:02:05.005405+00:00",
+      "completed_at": "2026-08-05T12:02:47.360391+00:00",
+      "status": "completed",
+      "notes": ""
+    }
+  ]
+}

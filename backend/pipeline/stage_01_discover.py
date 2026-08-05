@@ -133,6 +133,8 @@ def print_summary(files: list[dict]) -> None:
     print(f"\nTotal files discovered: {len(files)}")
 
 def run() -> dict:
+    # Capture reproducibility snapshot at the start of every pipeline run
+    pipeline_state.capture_run_metadata()
     pipeline_state.mark_running(STAGE_NAME)
     try:
         files = discover_files()

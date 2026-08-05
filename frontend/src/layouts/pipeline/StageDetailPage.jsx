@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import PropTypes from "prop-types";
 
 import Card from "@mui/material/Card";
@@ -15,7 +15,11 @@ import Footer from "examples/Footer";
 
 import { StageStatusPill, LiveIndicator } from "components/EflShared";
 import { usePipeline } from "context/PipelineContext";
-import { runPipelineStage, resetPipelineStage } from "services/endpoints";
+import {
+  runPipelineStage,
+  resetPipelineStage,
+  getPipelineReproducibility,
+} from "services/endpoints";
 import StageArtifactPreview from "layouts/pipeline/StageArtifactPreview";
 import colors from "assets/theme/base/colors";
 
@@ -31,6 +35,8 @@ function StageDetailPage({ stageName }) {
 
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState(null);
+  const [repro, setRepro] = useState(null);
+  const [reproError, setReproError] = useState(null);
 
   const status = stage.status || "PENDING";
   const progress =
@@ -41,6 +47,29 @@ function StageDetailPage({ stageName }) {
       : status === "COMPLETE"
       ? 100
       : 0;
+
+  useEffect(() => {
+    if (stageName !== "Discover") return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await getPipelineReproducibility();
+        if (!cancelled) {
+          setRepro(data);
+          setReproError(null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setRepro(null);
+          const detail = err?.response?.data?.detail || err?.message || "Unavailable";
+          setReproError(typeof detail === "string" ? detail : JSON.stringify(detail));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [stageName, status]);
 
   const handleRun = useCallback(async () => {
     setBusy(true);
@@ -149,6 +178,72 @@ function StageDetailPage({ stageName }) {
         </Card>
 
         <StageArtifactPreview stageName={stageName} stageStatus={status} />
+
+        {stageName === "Discover" && (
+          <Card sx={{ p: 2, mt: 2 }}>
+            <MDTypography variant="h6" fontWeight="medium" mb={1}>
+              Environment
+            </MDTypography>
+            {reproError && (
+              <MDAlert color="warning">{reproError}</MDAlert>
+            )}
+            {!reproError && !repro && (
+              <MDTypography variant="caption" color="text">
+                Loading reproducibility snapshot…
+              </MDTypography>
+            )}
+            {repro && (
+              <MDBox
+                component="dl"
+                sx={{
+                  m: 0,
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", sm: "160px 1fr" },
+                  rowGap: 1,
+                  columnGap: 2,
+                }}
+              >
+                <MDTypography component="dt" variant="caption" fontWeight="bold" color="text">
+                  Python
+                </MDTypography>
+                <MDTypography component="dd" variant="caption" color="text" sx={{ m: 0 }}>
+                  {(repro.python_version || "—").split(" ")[0]}
+                </MDTypography>
+
+                <MDTypography component="dt" variant="caption" fontWeight="bold" color="text">
+                  Key packages
+                </MDTypography>
+                <MDTypography component="dd" variant="caption" color="text" sx={{ m: 0 }}>
+                  {Object.entries(repro.key_packages || {})
+                    .slice(0, 8)
+                    .map(([k, v]) => `${k} ${v}`)
+                    .join(" · ") || "—"}
+                </MDTypography>
+
+                <MDTypography component="dt" variant="caption" fontWeight="bold" color="text">
+                  Dataset hash
+                </MDTypography>
+                <MDTypography
+                  component="dd"
+                  variant="caption"
+                  color="text"
+                  sx={{ m: 0, wordBreak: "break-all", fontFamily: "monospace" }}
+                >
+                  {(repro.dataset && repro.dataset.raw_dir_hash) || "—"}
+                </MDTypography>
+
+                <MDTypography component="dt" variant="caption" fontWeight="bold" color="text">
+                  Total runtime
+                </MDTypography>
+                <MDTypography component="dd" variant="caption" color="text" sx={{ m: 0 }}>
+                  {repro.runtime && repro.runtime.pipeline_total_seconds != null
+                    ? `${Number(repro.runtime.pipeline_total_seconds).toFixed(1)} s`
+                    : "— (run pipeline stages to record timings)"}
+                </MDTypography>
+              </MDBox>
+            )}
+          </Card>
+        )}
       </MDBox>
       <Footer />
     </DashboardLayout>

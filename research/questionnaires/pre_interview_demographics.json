@@ -1,0 +1,47 @@
+{
+  "questionnaire_id": "demographics",
+  "title": "Pre-Interview Demographics",
+  "questions": [
+    {
+      "id": "q1",
+      "text": "What is your primary teaching context?",
+      "type": "single_choice",
+      "options": ["Primary", "Secondary", "Adult", "Academic English"]
+    },
+    {
+      "id": "q2",
+      "text": "How many years have you been teaching EFL?",
+      "type": "integer"
+    },
+    {
+      "id": "q3",
+      "text": "What institution type do you work in?",
+      "type": "single_choice",
+      "options": [
+        "Public School",
+        "Private Language School",
+        "University/College",
+        "Freelance/Private Tutor",
+        "Other"
+      ]
+    },
+    {
+      "id": "q4",
+      "text": "How frequently do you use digital tools to find EFL resources?",
+      "type": "likert_5",
+      "anchors": ["Never", "Rarely", "Sometimes", "Often", "Always"]
+    },
+    {
+      "id": "q5",
+      "text": "How satisfied are you with your current method of finding EFL content?",
+      "type": "likert_5",
+      "anchors": [
+        "Very Dissatisfied",
+        "Dissatisfied",
+        "Neutral",
+        "Satisfied",
+        "Very Satisfied"
+      ]
+    }
+  ]
+}

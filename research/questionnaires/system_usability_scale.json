@@ -1,0 +1,78 @@
+{
+  "questionnaire_id": "sus",
+  "title": "System Usability Scale (SUS)",
+  "version": "1.0",
+  "description": "Standard 10-item System Usability Scale (Brooke, 1996), adapted to name the EFL IndexDB prototype. Scoring: odd items = response − 1; even items = 5 − response; SUS = sum × 2.5 (range 0–100).",
+  "scale": {
+    "type": "likert_5",
+    "anchors": [
+      "Strongly Disagree",
+      "Disagree",
+      "Neutral",
+      "Agree",
+      "Strongly Agree"
+    ]
+  },
+  "questions": [
+    {
+      "id": "sus_01",
+      "text": "I think that I would like to use the EFL IndexDB prototype frequently.",
+      "type": "likert_5",
+      "polarity": "positive"
+    },
+    {
+      "id": "sus_02",
+      "text": "I found the EFL IndexDB prototype unnecessarily complex.",
+      "type": "likert_5",
+      "polarity": "negative"
+    },
+    {
+      "id": "sus_03",
+      "text": "I thought the EFL IndexDB prototype was easy to use.",
+      "type": "likert_5",
+      "polarity": "positive"
+    },
+    {
+      "id": "sus_04",
+      "text": "I think that I would need the support of a technical person to be able to use the EFL IndexDB prototype.",
+      "type": "likert_5",
+      "polarity": "negative"
+    },
+    {
+      "id": "sus_05",
+      "text": "I found the various functions in the EFL IndexDB prototype were well integrated.",
+      "type": "likert_5",
+      "polarity": "positive"
+    },
+    {
+      "id": "sus_06",
+      "text": "I thought there was too much inconsistency in the EFL IndexDB prototype.",
+      "type": "likert_5",
+      "polarity": "negative"
+    },
+    {
+      "id": "sus_07",
+      "text": "I would imagine that most people would learn to use the EFL IndexDB prototype very quickly.",
+      "type": "likert_5",
+      "polarity": "positive"
+    },
+    {
+      "id": "sus_08",
+      "text": "I found the EFL IndexDB prototype very cumbersome to use.",
+      "type": "likert_5",
+      "polarity": "negative"
+    },
+    {
+      "id": "sus_09",
+      "text": "I felt very confident using the EFL IndexDB prototype.",
+      "type": "likert_5",
+      "polarity": "positive"
+    },
+    {
+      "id": "sus_10",
+      "text": "I needed to learn a lot of things before I could get going with the EFL IndexDB prototype.",
+      "type": "likert_5",
+      "polarity": "negative"
+    }
+  ]
+}

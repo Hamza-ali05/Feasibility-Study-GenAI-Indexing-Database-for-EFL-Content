@@ -35,11 +35,14 @@ import ExplainLocalStage from "layouts/pipeline/ExplainLocal";
 import ExplainQualityStage from "layouts/pipeline/ExplainQuality";
 import PredictStage from "layouts/pipeline/Predict";
 import Metrics from "layouts/metrics";
+import Experiments from "layouts/experiments";
 import Analytics from "layouts/analytics";
 import Duplicates from "layouts/duplicates";
 import AdminOverview from "layouts/admin/overview";
 import AdminManageResources from "layouts/admin/manage-resources";
 import AdminLogs from "layouts/admin/logs";
+import PractitionerOverview from "layouts/practitioner/overview";
+import PractitionerManage from "layouts/practitioner/manage";
 import About from "layouts/about";
 import RecommendationsPage from "layouts/recommendations";
 
@@ -52,9 +55,11 @@ import LibraryBooksIcon from "@mui/icons-material/LibraryBooks";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import AssessmentIcon from "@mui/icons-material/Assessment";
+import ScienceIcon from "@mui/icons-material/Science";
 import QueryStatsIcon from "@mui/icons-material/QueryStats";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
+import GroupsIcon from "@mui/icons-material/Groups";
 import LoginIcon from "@mui/icons-material/Login";
 import InfoIcon from "@mui/icons-material/Info";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
@@ -235,6 +240,14 @@ const routes = [
   },
   {
     type: "collapse",
+    name: "Experiments",
+    key: "experiments",
+    icon: <ScienceIcon fontSize="small" />,
+    route: "/experiments",
+    component: <Experiments />,
+  },
+  {
+    type: "collapse",
     name: "Search Analytics",
     key: "analytics",
     icon: <QueryStatsIcon fontSize="small" />,
@@ -288,6 +301,37 @@ const routes = [
         component: (
           <RequireAuth>
             <AdminLogs />
+          </RequireAuth>
+        ),
+      },
+    ],
+  },
+
+  {
+    type: "collapse",
+    name: "Practitioner Evaluation",
+    key: "practitioner-evaluation",
+    icon: <GroupsIcon fontSize="small" />,
+    collapse: [
+      {
+        name: "Overview",
+        key: "practitioner-overview",
+        icon: nestIcon,
+        route: "/practitioner/overview",
+        component: (
+          <RequireAuth>
+            <PractitionerOverview />
+          </RequireAuth>
+        ),
+      },
+      {
+        name: "Manage Participants",
+        key: "practitioner-manage",
+        icon: nestIcon,
+        route: "/practitioner/manage",
+        component: (
+          <RequireAuth>
+            <PractitionerManage />
           </RequireAuth>
         ),
       },
