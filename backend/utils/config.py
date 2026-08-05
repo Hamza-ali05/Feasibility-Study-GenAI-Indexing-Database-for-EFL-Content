@@ -26,6 +26,14 @@ def _env_str(key: str, default: str | None = None) -> str | None:
     stripped = raw.strip()
     return stripped if stripped else default
 
+
+def _env_bool(key: str, default: bool = False) -> bool:
+    raw = _env_str(key)
+    if raw is None:
+        return default
+    return raw.lower() in {"1", "true", "yes", "on"}
+
+
 def _env_path(key: str, default: Path) -> Path:
     raw = _env_str(key)
     if not raw:
@@ -60,6 +68,10 @@ class Config:
     DATA_RAW_DIR: Path = _env_path("DATA_RAW_DIR", PROJECT_ROOT / "data" / "raw")
 
     LOG_LEVEL: str = (_env_str("LOG_LEVEL", "INFO") or "INFO").upper()
+
+    # When True, unhandled exceptions may include detail in API responses.
+    # Keep False for demos / shared deployments.
+    DEBUG: bool = _env_bool("DEBUG", False)
 
     ANTHROPIC_API_KEY: str | None = _env_str("ANTHROPIC_API_KEY")
     RAG_MODEL: str = _env_str("RAG_MODEL", "claude-sonnet-4-6") or "claude-sonnet-4-6"

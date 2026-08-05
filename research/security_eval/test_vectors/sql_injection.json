@@ -1,0 +1,20 @@
+[
+  "' OR '1'='1",
+  "' OR 1=1 --",
+  "' OR 1=1#",
+  "'; DROP TABLE resources; --",
+  "1' UNION SELECT NULL--",
+  "1' UNION SELECT username, password FROM users--",
+  "admin'--",
+  "' OR ''='",
+  "1; SELECT * FROM sqlite_master--",
+  "' AND 1=0 UNION ALL SELECT 'admin', '81dc9bdb52d04dc20036dbd8313ed055'",
+  "') OR ('1'='1",
+  "1' ORDER BY 1--",
+  "1' ORDER BY 10--",
+  "\" OR \"\"=\"",
+  "OR 1=1",
+  "'; WAITFOR DELAY '0:0:5'--",
+  "1' AND (SELECT COUNT(*) FROM sqlite_master)>0--",
+  "' UNION SELECT sql FROM sqlite_master--"
+]

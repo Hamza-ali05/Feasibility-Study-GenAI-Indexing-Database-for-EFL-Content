@@ -1,0 +1,15 @@
+\begin{table}[htbp]
+\centering
+\caption{Retrieval performance comparison across methods.}
+\label{tab:retrieval_comparison}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Method & P@5 & P@10 & R@5 & R@10 & MAP & MRR & F1@10 \\
+\midrule
+TF-IDF Baseline & — & 0.5500 & — & 0.4800 & 0.5100 & — & 0.5100 \\
+SBERT (all-MiniLM-L6-v2) & — & 0.7200 & — & 0.6100 & \textbf{0.6800} & — & 0.6600 \\
+SBERT + Metadata Filters & — & 0.3768 & — & 0.0106 & 0.2583 & 0.4961 & 0.0197 \\
+SBERT + Metadata + RAG & — & — & — & — & — & — & — \\
+\bottomrule
+\end{tabular}
+\end{table}

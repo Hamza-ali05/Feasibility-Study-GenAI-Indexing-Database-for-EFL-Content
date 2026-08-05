@@ -12,7 +12,7 @@ from backend.auth.admin_auth import create_access_token, get_current_admin, veri
 from backend.db.analytics_store import AnalyticsStore
 from backend.services import dashboard_service, duplicate_service, resource_admin
 from backend.utils.config import Config
-from backend.utils.logger import get_logger, tail_log_lines
+from backend.utils.logger import get_logger, security_log, tail_log_lines
 
 logger = get_logger("efl_indexdb.api.admin")
 
@@ -41,6 +41,10 @@ def login(body: LoginBody) -> TokenResponse:
             ),
         )
     if body.username != expected_user or not verify_password(body.password):
+        security_log(
+            "failed_login",
+            f"username={body.username!r}",
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",

@@ -1,0 +1,7 @@
+Metric,Improvement %
+Precision@10,30.91
+Recall@10,27.08
+MAP,33.33
+F1@10,29.41
+MRR,
+Accuracy,21.88

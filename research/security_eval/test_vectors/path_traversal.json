@@ -1,0 +1,12 @@
+[
+  "../../../etc/passwd",
+  "..\\..\\..\\windows\\system32\\config\\sam",
+  "....//....//....//etc/passwd",
+  "..%2F..%2F..%2Fetc%2Fpasswd",
+  "%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd",
+  "/etc/passwd",
+  "....\\\\....\\\\....\\\\etc\\\\passwd",
+  "file:///etc/passwd",
+  "..%252F..%252F..%252Fetc%252Fpasswd",
+  "..../..../..../etc/passwd"
+]

@@ -1,0 +1,14 @@
+{
+  "stage": "Load",
+  "run_at": "2026-08-05T16:24:04.567549+00:00",
+  "files": [
+    {
+      "path": "demo.csv",
+      "ext": ".csv",
+      "rows": 2,
+      "status": "ok"
+    }
+  ],
+  "total_rows": 2,
+  "output": "D:/Documents/Yousaf/efl-indexdb/.pytest_tmp/test_load_unified_schema0/processed/02_loaded.parquet"
+}

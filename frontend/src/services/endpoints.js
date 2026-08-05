@@ -326,3 +326,71 @@ export async function exportPractitionerReports() {
   const { data } = await apiClient.post("/api/practitioner/export");
   return data;
 }
+
+// ── Research Report Generator (admin) ─────────────────────────────────
+
+export async function generateResearchReport(sections) {
+  const { data } = await apiClient.post("/api/report/generate", { sections });
+  return data;
+}
+
+export async function listReportSections() {
+  const { data } = await apiClient.get("/api/report/sections");
+  return data;
+}
+
+export async function getReportSection(filename) {
+  const { data } = await apiClient.get(
+    `/api/report/section/${encodeURIComponent(filename)}`
+  );
+  return data;
+}
+
+export async function downloadAllReportSections() {
+  const response = await apiClient.get("/api/report/download-all", {
+    responseType: "blob",
+  });
+  return response.data;
+}
+
+// ── Security Evaluation (admin) ───────────────────────────────────────
+
+export async function runSecurityAudit() {
+  const { data } = await apiClient.post("/api/security/run-audit");
+  return data;
+}
+
+export async function getSecurityAuditStatus() {
+  const { data } = await apiClient.get("/api/security/status");
+  return data;
+}
+
+export async function getSecurityReport() {
+  const { data } = await apiClient.get("/api/security/report");
+  return data;
+}
+
+export async function getSecurityOwasp() {
+  const { data } = await apiClient.get("/api/security/owasp");
+  return data;
+}
+
+export async function downloadSecurityMarkdown() {
+  const response = await apiClient.get("/api/security/report.md", {
+    responseType: "blob",
+  });
+  return response.data;
+}
+
+// ── Dissertation Figures (admin) ──────────────────────────────────────
+
+export async function listDissertationFigures() {
+  const { data } = await apiClient.get("/api/figures/list");
+  return data;
+}
+
+export async function exportDissertationFigures() {
+  const { data } = await apiClient.post("/api/figures/export");
+  return data;
+}
+

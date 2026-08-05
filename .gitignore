@@ -86,6 +86,15 @@ logs/
 *.log
 !logs/.gitkeep
 
+# Research — sensitive practitioner / coding data (keep reports)
+research/interviews/*
+!research/interviews/.gitkeep
+research/coding/*
+!research/coding/.gitkeep
+research/practitioner_eval/participants.json
+research/practitioner_eval/responses.json
+research/practitioner_eval/*.json.bak
+
 # Notebooks — keep jupytext .py sources; ignore converted notebooks / checkpoints
 .ipynb_checkpoints/
 notebooks/.ipynb_checkpoints/

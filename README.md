@@ -320,7 +320,45 @@ Treat operational hardening (rate limits, multi-user IAM, encryption at rest) as
 
 ---
 
-## 12. References
+## 12. Research Modules (Phases 9–16)
+
+Academic deliverables live under `research/` and are exposed via admin-authenticated API routes and Material Dashboard pages.
+
+| Phase | Module | Purpose | API / UI |
+|-------|--------|---------|----------|
+| **9** | `research/practitioner_eval/` | Interviews, SUS, thematic coding, exports | `/api/practitioner` · `/practitioner/overview`, `/practitioner/manage` |
+| **10** | `research/metrics_export.py` | Publication tables (CSV / booktabs TeX / PNG) | `POST /api/metrics/export` · Metrics → “Export Publication Tables” |
+| **11** | `research/experiment_tracker.py`, `run_experiment.py` | Track TF-IDF / SBERT / metadata / RAG runs | `/api/experiments` · `/experiments` |
+| **12** | `research/reproducibility.py` | Environment + dataset hash snapshots; stage timings | `GET /api/pipeline/reproducibility` · Discover → Environment panel |
+| **13** | `research/dissertation_figures.py` | Architecture / DFD / sequence / CEFR diagrams | `POST /api/figures/export` · `/figures` |
+| **14** | `research/benchmark_report.py` | GenAI vs TF-IDF report + significance tests | CLI / `research/reports/benchmark/` |
+| **15** | `research/research_report.py` | Draft dissertation chapters from live artefacts | `/api/report` · `/report` |
+| **16** | `research/security_eval/` | OWASP-aligned audit + hardening | `/api/security` · `/security` · `tests/test_security.py` |
+
+### Useful commands
+
+```powershell
+# Publication metrics
+python -c "from research.metrics_export import ResearchMetricsExporter; print(ResearchMetricsExporter().export_all())"
+
+# Dissertation figures
+python -c "from research.dissertation_figures import DissertationFigureGenerator; print(DissertationFigureGenerator().export_all())"
+
+# Benchmark markdown report
+python -c "from research.benchmark_report import BenchmarkReportGenerator; print(BenchmarkReportGenerator().generate_full_report())"
+
+# Draft chapters
+python -c "from research.research_report import ResearchReportGenerator; print(ResearchReportGenerator().generate_all())"
+
+# Security audit (API must be reachable for live probes)
+python -c "from research.security_eval import SecurityAuditor; a=SecurityAuditor(); a.run_full_audit(); print(a.generate_security_report())"
+```
+
+Sensitive interview transcripts / coding stores under `research/interviews/` and `research/coding/` are gitignored; generated tables and figures under `research/reports/` are kept for the dissertation appendix.
+
+---
+
+## 13. References
 
 Selected references underpinning the feasibility design (SBERT retrieval, CEFR labelling, vector search, and explainability). Consult the full dissertation / proposal PDF for the complete bibliography and citation style required by CCCU.
 

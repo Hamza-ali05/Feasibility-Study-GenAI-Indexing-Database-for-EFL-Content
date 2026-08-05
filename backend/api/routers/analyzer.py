@@ -14,12 +14,17 @@ from pydantic import BaseModel, Field
 from backend.services import analyzer_service
 from backend.utils import pipeline_state
 from backend.utils.logger import get_logger
+from backend.utils.sanitizer import (
+    ALLOWED_UPLOAD_EXTENSIONS,
+    sanitize_text_input,
+    validate_file_upload,
+)
 
 logger = get_logger("efl_indexdb.api.analyzer")
 
 router = APIRouter(tags=["analyzer"])
 
-ALLOWED_EXTENSIONS = {".txt", ".csv", ".pdf"}
+ALLOWED_EXTENSIONS = ALLOWED_UPLOAD_EXTENSIONS
 
 class ConfirmDuplicateBody(BaseModel):
     text: str
@@ -121,7 +126,7 @@ async def upload(request: Request) -> AnalyzerResult:
 
     if "application/json" in content_type:
         payload = await request.json()
-        body_text = str(payload.get("text") or "")
+        body_text = sanitize_text_input(str(payload.get("text") or ""))
         body_title = payload.get("title")
         force = bool(payload.get("force"))
     elif "multipart/form-data" in content_type:
@@ -136,22 +141,21 @@ async def upload(request: Request) -> AnalyzerResult:
         form_text = form.get("text")
         if upload is not None and hasattr(upload, "filename") and upload.filename:
             filename = str(upload.filename)
-            suffix = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-            if suffix not in ALLOWED_EXTENSIONS:
-                raise HTTPException(
-                    status_code=422,
-                    detail=(
-                        f"Unsupported extension '{suffix}'. "
-                        f"Allowed: {sorted(ALLOWED_EXTENSIONS)}"
-                    ),
-                )
             raw = await upload.read()
+            validate_file_upload(
+                {
+                    "filename": filename,
+                    "size": len(raw),
+                    "content_type": getattr(upload, "content_type", None)
+                    or (upload.headers.get("content-type") if hasattr(upload, "headers") else None),
+                }
+            )
             try:
-                body_text = _extract_text_from_upload(filename, raw)
+                body_text = sanitize_text_input(_extract_text_from_upload(filename, raw))
             except ValueError as exc:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
         elif form_text is not None:
-            body_text = str(form_text)
+            body_text = sanitize_text_input(str(form_text))
         else:
             raise HTTPException(
                 status_code=422,
@@ -187,7 +191,7 @@ def confirm_duplicate(body: ConfirmDuplicateBody) -> AnalyzerResult:
         raise HTTPException(status_code=422, detail="text is empty")
 
     result = _run_analyze(
-        body.text,
+        sanitize_text_input(body.text),
         title=body.title,
         filename=None,
         force=True,

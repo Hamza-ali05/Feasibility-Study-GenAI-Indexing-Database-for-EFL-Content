@@ -1,0 +1,5 @@
+Method,Accuracy,Precision,Recall,F1 (macro)
+TF-IDF Baseline,0.64,0.62,0.61,0.61
+SBERT (all-MiniLM-L6-v2),0.78,0.76,0.75,0.75
+SBERT + Metadata Filters,0.5436,0.5649,0.5291,0.5324
+SBERT + Metadata + RAG,—,—,—,—

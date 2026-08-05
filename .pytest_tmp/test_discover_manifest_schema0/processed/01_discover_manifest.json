@@ -1,0 +1,13 @@
+{
+  "stage": "Discover",
+  "run_at": "2026-08-05T16:24:04.442809+00:00",
+  "files": [
+    {
+      "path": "sample.csv",
+      "ext": ".csv",
+      "size_bytes": 56,
+      "rows_estimate": 2,
+      "encoding": "ascii"
+    }
+  ]
+}

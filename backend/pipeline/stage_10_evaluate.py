@@ -43,6 +43,7 @@ SBERT_MODEL_PATH = DATA_PROCESSED / "models" / "sbert_lr_classifier.joblib"
 TFIDF_CLF_PATH = DATA_PROCESSED / "models" / "tfidf_lr_baseline.joblib"
 TFIDF_VEC_PATH = DATA_PROCESSED / "models" / "tfidf_vectorizer.joblib"
 REPORT_PATH = DATA_PROCESSED / "10_evaluation_report.json"
+PER_QUERY_PATH = DATA_PROCESSED / "10_per_query_metrics.json"
 
 def _require(path) -> None:
     if not path.exists():
@@ -516,12 +517,42 @@ def run() -> dict:
         tfidf_retrieval = _aggregate_retrieval(tfidf_retrieved, relevant_sets, K)
         logger.info("TF-IDF retrieval@%s: %s", K, tfidf_retrieval)
 
+        delta_keys = (
+            "precision_at_5",
+            "recall_at_5",
+            "precision_at_10",
+            "recall_at_10",
+            "map",
+            "f1_at_10",
+            "mrr",
+        )
         delta = {
-            key: round(sbert_retrieval[key] - tfidf_retrieval[key], 6)
-            for key in ("precision_at_10", "recall_at_10", "map", "f1_at_10")
+            key: round(sbert_retrieval.get(key, 0.0) - tfidf_retrieval.get(key, 0.0), 6)
+            for key in delta_keys
+            if key in sbert_retrieval and key in tfidf_retrieval
         }
         for key, value in delta.items():
             logger.info("delta %s (SBERT - TFIDF) = %s", key, value)
+
+        query_ids = test_df["resource_id"].astype(str).tolist()
+        per_query_payload = {
+            "stage": STAGE_NAME,
+            "run_at": datetime.now(timezone.utc).isoformat(),
+            "k_values": [5, K],
+            "relevance_rule": "same cefr_level if labeled else same source_name",
+            "methods": {
+                "sbert": _per_query_metrics(
+                    sbert_retrieved, relevant_sets, query_ids, K
+                ),
+                "tfidf": _per_query_metrics(
+                    tfidf_retrieved, relevant_sets, query_ids, K
+                ),
+            },
+        }
+        with PER_QUERY_PATH.open("w", encoding="utf-8") as fh:
+            json.dump(per_query_payload, fh, indent=2)
+            fh.write("\n")
+        logger.info("wrote per-query metrics → %s", PER_QUERY_PATH)
 
         labeled_mask = test_df["cefr_level"].notna()
         labeled = test_df.loc[labeled_mask].reset_index(drop=True)
@@ -541,26 +572,30 @@ def run() -> dict:
         logger.info("SBERT classification: %s", sbert_clf_metrics)
         logger.info("TF-IDF classification: %s", tfidf_clf_metrics)
 
+        def _round_retrieval(metrics: dict) -> dict:
+            keys = (
+                "precision_at_5",
+                "recall_at_5",
+                "f1_at_5",
+                "precision_at_10",
+                "recall_at_10",
+                "map",
+                "f1_at_10",
+                "mrr",
+            )
+            return {k: round(float(metrics[k]), 6) for k in keys if k in metrics}
+
         report = {
             "stage": STAGE_NAME,
             "run_at": datetime.now(timezone.utc).isoformat(),
             "retrieval": {
-                "sbert": {
-                    "precision_at_10": round(sbert_retrieval["precision_at_10"], 6),
-                    "recall_at_10": round(sbert_retrieval["recall_at_10"], 6),
-                    "map": round(sbert_retrieval["map"], 6),
-                    "f1_at_10": round(sbert_retrieval["f1_at_10"], 6),
-                },
-                "tfidf": {
-                    "precision_at_10": round(tfidf_retrieval["precision_at_10"], 6),
-                    "recall_at_10": round(tfidf_retrieval["recall_at_10"], 6),
-                    "map": round(tfidf_retrieval["map"], 6),
-                    "f1_at_10": round(tfidf_retrieval["f1_at_10"], 6),
-                },
+                "sbert": _round_retrieval(sbert_retrieval),
+                "tfidf": _round_retrieval(tfidf_retrieval),
                 "delta": delta,
                 "queries_evaluated": int(sbert_retrieval.get("queries_evaluated", 0)),
                 "relevance_rule": "same cefr_level if labeled else same source_name",
                 "k": K,
+                "per_query_metrics_path": str(PER_QUERY_PATH),
             },
             "classification": {
                 "sbert": {

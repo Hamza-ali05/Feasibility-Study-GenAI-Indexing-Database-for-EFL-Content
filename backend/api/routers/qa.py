@@ -15,6 +15,7 @@ from sse_starlette.sse import EventSourceResponse
 from backend.services import rag_service
 from backend.utils import pipeline_state
 from backend.utils.logger import get_logger
+from backend.utils.sanitizer import sanitize_search_query
 
 logger = get_logger("efl_indexdb.api.qa")
 
@@ -46,7 +47,7 @@ def _require_predict_complete() -> None:
 @router.post("/ask", response_model=QAAskResponse)
 def ask(body: QAAskRequest) -> QAAskResponse:
     _require_predict_complete()
-    question = (body.question or "").strip()
+    question = sanitize_search_query(body.question or "")
     if not question:
         raise HTTPException(status_code=422, detail="question must be a non-empty string")
 

@@ -43,6 +43,9 @@ import AdminManageResources from "layouts/admin/manage-resources";
 import AdminLogs from "layouts/admin/logs";
 import PractitionerOverview from "layouts/practitioner/overview";
 import PractitionerManage from "layouts/practitioner/manage";
+import ReportGenerator from "layouts/report";
+import SecurityEvaluation from "layouts/security";
+import FiguresPage from "layouts/figures";
 import About from "layouts/about";
 import RecommendationsPage from "layouts/recommendations";
 
@@ -60,6 +63,9 @@ import QueryStatsIcon from "@mui/icons-material/QueryStats";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import GroupsIcon from "@mui/icons-material/Groups";
+import DescriptionIcon from "@mui/icons-material/Description";
+import SecurityIcon from "@mui/icons-material/Security";
+import ImageIcon from "@mui/icons-material/Image";
 import LoginIcon from "@mui/icons-material/Login";
 import InfoIcon from "@mui/icons-material/Info";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
@@ -336,6 +342,43 @@ const routes = [
         ),
       },
     ],
+  },
+
+  {
+    type: "collapse",
+    name: "Report Generator",
+    key: "report-generator",
+    icon: <DescriptionIcon fontSize="small" />,
+    route: "/report",
+    component: (
+      <RequireAuth>
+        <ReportGenerator />
+      </RequireAuth>
+    ),
+  },
+  {
+    type: "collapse",
+    name: "Security Audit",
+    key: "security-audit",
+    icon: <SecurityIcon fontSize="small" />,
+    route: "/security",
+    component: (
+      <RequireAuth>
+        <SecurityEvaluation />
+      </RequireAuth>
+    ),
+  },
+  {
+    type: "collapse",
+    name: "Dissertation Figures",
+    key: "dissertation-figures",
+    icon: <ImageIcon fontSize="small" />,
+    route: "/figures",
+    component: (
+      <RequireAuth>
+        <FiguresPage />
+      </RequireAuth>
+    ),
   },
 
   { type: "title", title: "Account", key: "title-account" },

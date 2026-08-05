@@ -14,9 +14,11 @@ from backend.utils.config import PROJECT_ROOT, Config
 
 LOG_DIR = PROJECT_ROOT / "logs"
 LOG_FILE = LOG_DIR / "efl_indexdb.log"
+SECURITY_LOG_FILE = LOG_DIR / "security.log"
 
 _FORMAT = "%(asctime)s [%(levelname)s] %(name)s — %(message)s"
 _CONFIGURED = False
+_SECURITY_LOGGER: logging.Logger | None = None
 
 def _resolve_level() -> int:
     name = (Config.LOG_LEVEL or "INFO").upper()
@@ -91,3 +93,35 @@ def tail_log_lines(lines: int = 200) -> list[str]:
         return []
     parts = text.splitlines()
     return parts[-n:]
+
+
+def security_log(event: str, detail: str = "") -> None:
+    """Append a security event to ``logs/security.log`` (separate from app log)."""
+    global _SECURITY_LOGGER
+    _ensure_root_handlers()
+    if _SECURITY_LOGGER is None:
+        sec = logging.getLogger("efl_indexdb.security")
+        sec.setLevel(logging.INFO)
+        sec.propagate = False
+        try:
+            LOG_DIR.mkdir(parents=True, exist_ok=True)
+            if not any(
+                isinstance(h, logging.FileHandler)
+                and Path(getattr(h, "baseFilename", "")) == SECURITY_LOG_FILE
+                for h in sec.handlers
+            ):
+                fh = logging.FileHandler(SECURITY_LOG_FILE, encoding="utf-8")
+                fh.setLevel(logging.INFO)
+                fh.setFormatter(logging.Formatter(_FORMAT))
+                sec.addHandler(fh)
+        except OSError:
+            # Fall back to root app logger if security file cannot be created
+            get_logger("efl_indexdb.security").warning(
+                "security_log file unavailable; event=%s detail=%s", event, detail
+            )
+            return
+        _SECURITY_LOGGER = sec
+    msg = f"event={event}"
+    if detail:
+        msg = f"{msg} | {detail}"
+    _SECURITY_LOGGER.info(msg)

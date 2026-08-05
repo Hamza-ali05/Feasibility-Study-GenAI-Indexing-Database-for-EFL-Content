@@ -20,6 +20,7 @@ from backend.services import analytics_service
 from backend.utils.config import DATA_PROCESSED
 from backend.utils import pipeline_state
 from backend.utils.logger import get_logger
+from backend.utils.sanitizer import sanitize_search_query
 
 logger = get_logger("efl_indexdb.api.search")
 
@@ -73,16 +74,19 @@ def _predict_query_cefr(query_vec: np.ndarray) -> str | None:
 @router.post("", response_model=SearchResponse)
 @router.post("/", response_model=SearchResponse)
 def semantic_search(body: SearchQuery) -> SearchResponse:
-    logger.info("POST /api/search received query=%r", (body.query or "")[:80])
+    query = sanitize_search_query(body.query or "")
+    logger.info("POST /api/search received query=%r", query[:80])
     _require_pipeline_ready()
-    if not body.query or not body.query.strip():
+    if not query:
         raise HTTPException(status_code=422, detail="query must be a non-empty string")
+
+    body = body.model_copy(update={"query": query})
 
     top_k = max(1, min(int(body.top_k or 10), 100))
     fetch_k = max(top_k * CANDIDATE_MULTIPLIER, CANDIDATE_FLOOR)
 
     embedder = get_embedder()
-    query_vec = embedder.embed_single(body.query.strip())
+    query_vec = embedder.embed_single(query)
     query_cefr = _predict_query_cefr(query_vec)
 
     try:
@@ -127,14 +131,14 @@ def semantic_search(body: SearchQuery) -> SearchResponse:
         "top_k": top_k,
     }
     analytics_service.log_search_query(
-        query_text=body.query.strip(),
+        query_text=query,
         filters={k: v for k, v in filters_used.items() if v is not None and k != "top_k"},
         result_count=len(results),
         top_result_id=results[0].resource_id if results else None,
     )
 
     return SearchResponse(
-        query=body.query.strip(),
+        query=query,
         results=results,
         query_cefr_prediction=query_cefr,
         engine="faiss+sbert",

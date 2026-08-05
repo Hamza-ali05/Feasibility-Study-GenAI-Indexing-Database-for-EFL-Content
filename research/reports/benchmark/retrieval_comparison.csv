@@ -1,0 +1,5 @@
+Method,P@5,P@10,R@5,R@10,MAP,MRR,F1@10
+TF-IDF Baseline,—,0.55,—,0.48,0.51,—,0.51
+SBERT (all-MiniLM-L6-v2),—,0.72,—,0.61,0.68,—,0.66
+SBERT + Metadata Filters,—,0.3768,—,0.0106,0.2583,0.4961,0.0197
+SBERT + Metadata + RAG,—,—,—,—,—,—,—
