@@ -451,12 +451,26 @@ def export_code_frequency_chart(
     plt.close(fig)
 
 
-def export_all(output_dir: str | Path) -> None:
-    """Run all practitioner-evaluation export helpers into ``output_dir``."""
-    output_dir = Path(output_dir)
+def export_all(output_dir: str | Path | None = None) -> Path:
+    """Run all practitioner-evaluation export helpers into ``output_dir``.
+
+    Defaults to ``research/reports`` (same as the practitioner API export).
+    """
+    output_dir = Path(output_dir) if output_dir is not None else (_RESEARCH_ROOT / "reports")
     output_dir.mkdir(parents=True, exist_ok=True)
     analyzer = FeedbackAnalyzer()
     export_participant_demographics_table(output_dir, analyzer.interviews)
     export_sus_results(output_dir, analyzer.questionnaires, analyzer.interviews)
     export_thematic_map_figure(output_dir, analyzer.coder)
     export_code_frequency_chart(output_dir, analyzer.coder)
+    return output_dir
+
+
+# Alias used in docs / one-liners (same as export_all)
+export_all_tables = export_all
+
+
+if __name__ == "__main__":
+    out = export_all()
+    print(f"Exported practitioner tables to {out}")
+

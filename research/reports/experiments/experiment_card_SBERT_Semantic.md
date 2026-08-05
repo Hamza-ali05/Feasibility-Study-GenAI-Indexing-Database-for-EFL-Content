@@ -1,9 +1,9 @@
 # Experiment Card: SBERT Semantic
 
-**ID:** `f10988b0-ab00-4d8d-815f-a8d4ad94dcea`  
+**ID:** `558ca82a-47cf-430c-87cb-ceaab875393a`  
 **Status:** completed  
-**Started:** 2026-08-05T16:52:37.958458+00:00  
-**Completed:** 2026-08-05T16:52:41.248421+00:00  
+**Started:** 2026-08-05T19:15:02.505982+00:00  
+**Completed:** 2026-08-05T19:15:07.320098+00:00  
 
 SBERT all-MiniLM-L6-v2 semantic retrieval
 
@@ -28,7 +28,7 @@ SBERT all-MiniLM-L6-v2 semantic retrieval
 | Train | 18953 |
 | Val | 4062 |
 | Test | 4062 |
-| Dataset hash | `a1e085127bd633e7` |
+| Dataset hash | `88af69031af11fe3` |
 
 ## Results
 
@@ -77,7 +77,7 @@ SBERT all-MiniLM-L6-v2 semantic retrieval
 
 ```json
 {
-  "timestamp": "2026-08-05T16:52:41.250119+00:00",
+  "timestamp": "2026-08-05T19:15:07.322295+00:00",
   "python_version": "3.13.14 (tags/v3.13.14:fd17997, Jun 10 2026, 13:03:48) [MSC v.1944 64 bit (AMD64)]",
   "platform": {
     "os": "Windows",
@@ -112,7 +112,9 @@ SBERT all-MiniLM-L6-v2 semantic retrieval
     "bcrypt": "5.0.0",
     "beautifulsoup4": "4.15.0",
     "blinker": "1.9.0",
+    "boolean.py": "5.0",
     "brotli": "1.2.0",
+    "CacheControl": "0.14.4",
     "cachetools": "7.1.4",
     "certifi": "2026.5.20",
     "cffi": "2.1.0",
@@ -126,6 +128,7 @@ SBERT all-MiniLM-L6-v2 semantic retrieval
     "cryptography": "49.0.0",
     "cssselect2": "0.9.0",
     "cycler": "0.12.1",
+    "cyclonedx-python-lib": "11.11.0",
     "datasets": "5.0.1",
     "decompyle3": "3.9.3",
     "defusedxml": "0.7.1",
@@ -174,6 +177,7 @@ SBERT all-MiniLM-L6-v2 semantic retrieval
     "kiwisolver": "1.5.0",
     "lazy-loader": "0.5",
     "libclang": "18.1.1",
+    "license-expression": "30.4.4",
     "lime": "0.2.0.1",
     "llvmlite": "0.48.0",
     "lxml": "6.1.1",
@@ -185,6 +189,7 @@ SBERT all-MiniLM-L6-v2 semantic retrieval
     "mdurl": "0.1.2",
     "ml_dtypes": "0.5.4",
     "mpmath": "1.3.0",
+    "msgpack": "1.2.1",
     "multidict": "6.7.1",
     "multiprocess": "0.70.19",
     "namex": "0.1.0",
@@ -198,6 +203,7 @@ SBERT all-MiniLM-L6-v2 semantic retrieval
     "opt_einsum": "3.4.0",
     "optree": "0.19.1",
     "optuna": "4.9.0",
+    "packageurl-python": "0.17.6",
     "packaging": "26.2",
     "pandas": "3.0.3",
     "passlib": "1.7.4",
@@ -207,12 +213,16 @@ SBERT all-MiniLM-L6-v2 semantic retrieval
     "pefile": "2024.8.26",
     "pillow": "12.3.0",
     "pip": "26.2",
+    "pip-api": "0.0.34",
+    "pip-requirements-parser": "32.0.1",
+    "pip_audit": "2.10.1",
     "platformdirs": "4.11.0",
     "plotly": "6.8.0",
     "pluggy": "1.6.0",
     "propcache": "0.5.2",
     "protobuf": "7.35.1",
     "psutil": "7.2.2",
+    "py-serializable": "2.1.0",
     "pyarrow": "24.0.0",
     "pyasn1": "0.6.4",
     "pycdc": "0.1.0",
@@ -259,6 +269,7 @@ SBERT all-MiniLM-L6-v2 semantic retrieval
     "slicer": "0.0.8",
     "smmap": "5.0.3",
     "sniffio": "1.3.1",
+    "sortedcontainers": "2.4.0",
     "soupsieve": "2.9.1",
     "spark-parser": "1.9.0",
     "SQLAlchemy": "2.0.51",
@@ -277,6 +288,8 @@ SBERT all-MiniLM-L6-v2 semantic retrieval
     "tinyhtml5": "2.1.0",
     "tokenizers": "0.22.2",
     "toml": "0.10.2",
+    "tomli": "2.4.1",
+    "tomli_w": "1.2.0",
     "torch": "2.12.1",
     "torchaudio": "2.11.0",
     "torchvision": "0.27.1",
@@ -347,8 +360,23 @@ SBERT all-MiniLM-L6-v2 semantic retrieval
     "balance_ratio_threshold": 3.0
   },
   "runtime": {
-    "pipeline_total_seconds": null,
-    "per_stage_seconds": null
+    "pipeline_total_seconds": 2013.862,
+    "per_stage_seconds": {
+      "Discover": 2.485,
+      "Load": 9.894,
+      "Integrate": 9.592,
+      "EDA": 3.262,
+      "Clean": 15.485,
+      "Split": 2.164,
+      "Preprocess": 1639.114,
+      "Balance": 1.572,
+      "Train": 13.345,
+      "Evaluate": 28.166,
+      "Explain Global": 2.363,
+      "Explain Local": 86.22,
+      "Explain Quality": 186.664,
+      "Predict": 13.536
+    }
   }
 }
 ```

@@ -14,6 +14,30 @@ for _p in (_ROOT, _BACKEND):
     if s not in sys.path:
         sys.path.insert(0, s)
 
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_sessionfinish(session, exitstatus):
+    """
+    Swallow Windows PermissionError during pytest temp cleanup.
+
+    All tests can pass, then session teardown fails on
+    ``pytest-current`` junction resolve (WinError 5 Access Denied).
+    """
+    del session, exitstatus
+    try:
+        outcome = yield
+    except PermissionError:
+        if sys.platform != "win32":
+            raise
+        return
+    excinfo = getattr(outcome, "excinfo", None)
+    if (
+        excinfo
+        and isinstance(excinfo[1], PermissionError)
+        and sys.platform == "win32"
+    ):
+        outcome.force_result(None)
+
+
 @pytest.fixture
 def client():
     """FastAPI TestClient without SBERT/FAISS warm-up on startup."""

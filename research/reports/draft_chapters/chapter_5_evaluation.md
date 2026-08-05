@@ -6,9 +6,9 @@
 
 - **System completed all 14 stages:** YES
   - All recorded stages are COMPLETE.
-- **All live features operational:** NO
-  - Gaps: RAG (Anthropic)
-- **Retrieval performance meets threshold:** SBERT MAP=0.6800. This exceeds a conventional 0.5 MAP feasibility threshold used in the study protocol.
+- **All live features operational:** YES
+  - Search artefacts, classifier, FAISS, and Predict present.
+- **Retrieval performance meets threshold:** SBERT MAP=0.1601. Compare against the feasibility threshold defined in the proposal/methodology.
 
 ## 5.2 Practitioner Evaluation
 
@@ -41,12 +41,12 @@
 
 | Metric       |   Improvement % |
 |:-------------|----------------:|
-| Precision@10 |           30.91 |
-| Recall@10    |           27.08 |
-| MAP          |           33.33 |
-| F1@10        |           29.41 |
-| MRR          |          nan    |
-| Accuracy     |           21.88 |
+| Precision@10 |           70.54 |
+| Recall@10    |          112.98 |
+| MAP          |          171.72 |
+| F1@10        |          110.7  |
+| MRR          |           74.4  |
+| Accuracy     |           -5.76 |
 
 ### Positioning against the literature
 
@@ -70,7 +70,10 @@
 
 ### Algorithmic bias findings
 
-- skill Speaking F1=0.700 < 0.70 (at risk)
+- CEFR B1 F1=0.345 < 0.60 (at risk)
+- CEFR B2 F1=0.471 < 0.60 (at risk)
+- CEFR C1 F1=0.324 < 0.60 (at risk)
+- skill_type unavailable or fully null — per_skill_f1 not computed
 
 ### Security evaluation results
 

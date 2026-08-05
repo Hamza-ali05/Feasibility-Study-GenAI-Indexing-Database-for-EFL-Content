@@ -15,7 +15,7 @@ import pandas as pd
 from lime.lime_tabular import LimeTabularExplainer
 from sentence_transformers import SentenceTransformer
 
-from backend.models.embedder import DEFAULT_MODEL_NAME
+from backend.models.embedder import DEFAULT_MODEL_NAME, get_embedder
 from backend.utils.config import DATA_EMBEDDINGS, DATA_PROCESSED, DATA_SPLITS
 from backend.utils.logger import get_logger
 from backend.utils import pipeline_state
@@ -80,29 +80,66 @@ def _stratified_sample(df: pd.DataFrame, n: int = N_SAMPLES, seed: int = RANDOM_
         raise RuntimeError("Could not sample any test rows for Explain Local")
     return df.loc[selected_idx].reset_index(drop=True)
 
-def _build_dim_token_map(model_name: str = DEFAULT_MODEL_NAME, top_per_dim: int = 1) -> dict[int, str]:
+def _load_sentence_transformer(model_name: str) -> SentenceTransformer:
+    """Prefer process embedder / local HF cache — avoid Hub when offline."""
+    try:
+        return get_embedder(model_name).model
+    except Exception as exc:
+        logger.warning("get_embedder failed (%s); trying local_files_only", exc)
+    try:
+        return SentenceTransformer(model_name, local_files_only=True)
+    except Exception as cache_exc:
+        logger.warning(
+            "Local cache miss for %s (%s); attempting download",
+            model_name,
+            cache_exc,
+        )
+        return SentenceTransformer(model_name, local_files_only=False)
+
+def _fallback_dim_map(n_dims: int) -> dict[int, str]:
+    return {d: f"dim_{d}" for d in range(n_dims)}
+
+def _build_dim_token_map(
+    model_name: str = DEFAULT_MODEL_NAME,
+    *,
+    n_dims: int | None = None,
+    top_per_dim: int = 1,
+) -> dict[int, str]:
     """
     Approximate mapping: for each embedding dimension, pick the tokenizer
     vocabulary token whose input-embedding component on that dim has the
     largest absolute value (excluding special tokens).
-    """
-    logger.info("building approx dim→token map from %s input embeddings", model_name)
-    st = SentenceTransformer(model_name)
-    tokenizer = st.tokenizer
-    emb_layer = st[0].auto_model.get_input_embeddings()
-    weight = emb_layer.weight.detach().cpu().numpy()
 
-    special = set(int(i) for i in tokenizer.all_special_ids)
-    abs_w = np.abs(weight)
-    for sid in special:
-        if 0 <= sid < abs_w.shape[0]:
-            abs_w[sid, :] = -1.0
-    top_ids = np.argmax(abs_w, axis=0)
-    mapping: dict[int, str] = {}
-    for d, vocab_id in enumerate(top_ids.tolist()):
-        piece = tokenizer.convert_ids_to_tokens(int(vocab_id))
-        mapping[d] = piece if piece else f"dim_{d}"
-    return mapping
+    If the model cannot be loaded offline (DNS / Hub down), fall back to
+    ``dim_N`` labels so LIME explanations still complete.
+    """
+    del top_per_dim
+    logger.info("building approx dim→token map from %s input embeddings", model_name)
+    try:
+        st = _load_sentence_transformer(model_name)
+        tokenizer = st.tokenizer
+        emb_layer = st[0].auto_model.get_input_embeddings()
+        weight = emb_layer.weight.detach().cpu().numpy()
+
+        special = set(int(i) for i in tokenizer.all_special_ids)
+        abs_w = np.abs(weight)
+        for sid in special:
+            if 0 <= sid < abs_w.shape[0]:
+                abs_w[sid, :] = -1.0
+        top_ids = np.argmax(abs_w, axis=0)
+        mapping: dict[int, str] = {}
+        for d, vocab_id in enumerate(top_ids.tolist()):
+            piece = tokenizer.convert_ids_to_tokens(int(vocab_id))
+            mapping[d] = piece if piece else f"dim_{d}"
+        return mapping
+    except Exception as exc:
+        dims = int(n_dims) if n_dims is not None else 384
+        logger.warning(
+            "dim→token map unavailable (%s); using dim_N labels for %s dims",
+            exc,
+            dims,
+        )
+        return _fallback_dim_map(dims)
 
 def _lime_top_features(
     explainer: LimeTabularExplainer,
@@ -198,7 +235,10 @@ def run() -> dict:
             random_state=RANDOM_STATE,
         )
 
-        dim_token_map = _build_dim_token_map(DEFAULT_MODEL_NAME)
+        dim_token_map = _build_dim_token_map(
+            DEFAULT_MODEL_NAME,
+            n_dims=int(train_X.shape[1]),
+        )
 
         def predict_proba(batch: np.ndarray) -> np.ndarray:
             return clf.predict_proba(batch)

@@ -33,6 +33,7 @@ BALANCED_PARQUET = DATA_SPLITS / "train" / "balanced_train.parquet"
 SBERT_CLF_PATH = DATA_PROCESSED / "models" / "sbert_lr_classifier.joblib"
 TFIDF_VEC_PATH = DATA_PROCESSED / "models" / "tfidf_vectorizer.joblib"
 OUTPUT_PATH = DATA_PROCESSED / "14_last_predict.json"
+DEFAULT_QUERY = "EFL reading comprehension practice"
 
 RESULT_FIELDS = [
     "rank",
@@ -276,12 +277,17 @@ def run(query: str, top_k: int = 10) -> dict:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="EFL IndexDB Predict — semantic resource search")
-    parser.add_argument("--query", required=True, help="Free-text search query")
+    parser.add_argument(
+        "--query",
+        default=DEFAULT_QUERY,
+        help=f"Free-text search query (default: {DEFAULT_QUERY!r})",
+    )
     parser.add_argument("--top_k", type=int, default=10, help="Number of results (default 10)")
     args = parser.parse_args(argv)
     if args.top_k < 1:
         raise SystemExit("--top_k must be >= 1")
-    run(query=args.query, top_k=args.top_k)
+    query = (args.query or "").strip() or DEFAULT_QUERY
+    run(query=query, top_k=args.top_k)
 
 if __name__ == "__main__":
     main()

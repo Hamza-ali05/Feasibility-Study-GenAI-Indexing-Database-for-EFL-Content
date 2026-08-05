@@ -3,6 +3,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import PropTypes from "prop-types";
 
 import Card from "@mui/material/Card";
 import Chip from "@mui/material/Chip";
@@ -62,6 +63,12 @@ function SummaryCard({ title, value, color }) {
     </Card>
   );
 }
+
+SummaryCard.propTypes = {
+  title: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  color: PropTypes.string,
+};
 
 function CategorySection({ title, items }) {
   const [open, setOpen] = useState(false);
@@ -140,6 +147,11 @@ function CategorySection({ title, items }) {
     </Card>
   );
 }
+
+CategorySection.propTypes = {
+  title: PropTypes.string.isRequired,
+  items: PropTypes.arrayOf(PropTypes.object),
+};
 
 function SecurityEvaluation() {
   const [report, setReport] = useState(null);

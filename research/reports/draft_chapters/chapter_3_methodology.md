@@ -12,22 +12,22 @@
 | CPU count | 8 |
 | GPU available | False |
 | GPU device | None |
-| Snapshot timestamp | 2026-08-05T15:32:15.573861+00:00 |
+| Snapshot timestamp | 2026-08-05T19:32:14.578172+00:00 |
 
 ### Key package versions
 
 | Package | Version |
 | --- | --- |
-| sentence-transformers | 5.6.1 |
-| faiss-cpu | 1.15.0 |
+| sentence-transformers | 5.6.0 |
+| faiss-cpu | 1.14.3 |
 | scikit-learn | 1.9.0 |
-| pandas | 3.0.5 |
+| pandas | 3.0.3 |
 | numpy | 2.4.6 |
 | shap | 0.52.0 |
 | lime | 0.2.0.1 |
-| anthropic | 0.120.2 |
-| fastapi | 0.141.1 |
-| torch | 2.13.0 |
+| anthropic | 0.109.2 |
+| fastapi | 0.137.1 |
+| torch | 2.12.1 |
 
 ### Hardware specifications
 

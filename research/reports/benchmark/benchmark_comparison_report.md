@@ -6,8 +6,8 @@ EFL IndexDB GenAI feasibility study.
 ## Dataset Summary
 
 - **Total resources:** 29732
-- **Queries evaluated (Stage 10):** 100
-- **Labeled test rows (classification):** 120
+- **Queries evaluated (Stage 10):** 954
+- **Labeled test rows (classification):** 241
 
 ### CEFR distribution
 
@@ -33,12 +33,12 @@ EFL IndexDB GenAI feasibility study.
 
 ## Retrieval Performance Comparison
 
-| Method                   | P@5   | P@10   | R@5   | R@10   | MAP    | MRR    | F1@10   |
-|:-------------------------|:------|:-------|:------|:-------|:-------|:-------|:--------|
-| TF-IDF Baseline          | —     | 0.55   | —     | 0.48   | 0.51   | —      | 0.51    |
-| SBERT (all-MiniLM-L6-v2) | —     | 0.72   | —     | 0.61   | 0.68   | —      | 0.66    |
-| SBERT + Metadata Filters | —     | 0.3768 | —     | 0.0106 | 0.2583 | 0.4961 | 0.0197  |
-| SBERT + Metadata + RAG   | —     | —      | —     | —      | —      | —      | —       |
+| Method                   | P@5    |   P@10 | R@5    |   R@10 |    MAP |    MRR |   F1@10 |
+|:-------------------------|:-------|-------:|:-------|-------:|-------:|-------:|--------:|
+| TF-IDF Baseline          | 0.1878 | 0.221  | 0.0025 | 0.005  | 0.0951 | 0.2845 |  0.0093 |
+| SBERT (all-MiniLM-L6-v2) | 0.2887 | 0.2988 | 0.0034 | 0.0063 | 0.1601 | 0.3727 |  0.0115 |
+| SBERT + Metadata Filters | —      | 0.3768 | —      | 0.0106 | 0.2583 | 0.4961 |  0.0197 |
+| SBERT + Metadata + RAG   | —      | 0.3768 | —      | 0.0106 | 0.2583 | 0.4961 |  0.0197 |
 
 Artefacts: `retrieval_comparison.csv` / `.tex` / `.png`
 
@@ -47,21 +47,20 @@ Artefacts: `retrieval_comparison.csv` / `.tex` / `.png`
 ### Statistical significance
 
 - Metric: `precision_at_10` (sbert vs tfidf)
-- Paired n: 0
-- Paired t-test p: None
-- Wilcoxon p: None
-- Cohen's d: None
-- Significant at α=0.05: False
-- Note: Per-query metrics unavailable. Re-run Stage 10 Evaluate to write 10_per_query_metrics.json.
+- Paired n: 954
+- Paired t-test p: 8.231567202806485e-29
+- Wilcoxon p: 4.2230684912938276e-24
+- Cohen's d: 0.3728
+- Significant at α=0.05: True
 
 ## Classification Performance Comparison
 
-| Method                   | Accuracy   | Precision   | Recall   | F1 (macro)   |
-|:-------------------------|:-----------|:------------|:---------|:-------------|
-| TF-IDF Baseline          | 0.64       | 0.62        | 0.61     | 0.61         |
-| SBERT (all-MiniLM-L6-v2) | 0.78       | 0.76        | 0.75     | 0.75         |
-| SBERT + Metadata Filters | 0.5436     | 0.5649      | 0.5291   | 0.5324       |
-| SBERT + Metadata + RAG   | —          | —           | —        | —            |
+| Method                   |   Accuracy |   Precision |   Recall |   F1 (macro) |
+|:-------------------------|-----------:|------------:|---------:|-------------:|
+| TF-IDF Baseline          |     0.5768 |      0.6377 |   0.565  |       0.554  |
+| SBERT (all-MiniLM-L6-v2) |     0.5436 |      0.5649 |   0.5291 |       0.5324 |
+| SBERT + Metadata Filters |     0.5436 |      0.5649 |   0.5291 |       0.5324 |
+| SBERT + Metadata + RAG   |     0.5436 |      0.5649 |   0.5291 |       0.5324 |
 
 Artefacts: `classification_comparison.csv` / `.tex` / `.png`
 
@@ -69,23 +68,22 @@ Artefacts: `classification_comparison.csv` / `.tex` / `.png`
 
 ## Performance Improvement Summary
 
-Best GenAI method vs TF-IDF: **SBERT (all-MiniLM-L6-v2)**
+Best GenAI method vs TF-IDF: **SBERT + Metadata Filters**
 
 | Metric | Improvement % |
 |--------|---------------|
-| Precision@10 | +30.91 |
-| Recall@10 | +27.08 |
-| MAP | +33.33 |
-| F1@10 | +29.41 |
-| MRR | — |
+| Precision@10 | +70.54 |
+| Recall@10 | +112.98 |
+| MAP | +171.72 |
+| F1@10 | +110.70 |
+| MRR | +74.40 |
 
 ### Key findings
 
-- SBERT (all-MiniLM-L6-v2) improves MAP by +33.3% relative to the TF-IDF baseline.
-- Precision@10 improvement vs TF-IDF: +30.9%.
-- F1@10 improvement vs TF-IDF: +29.4%.
-- Per-query metrics unavailable. Re-run Stage 10 Evaluate to write 10_per_query_metrics.json.
-- Methods without completed results (run corresponding experiments): SBERT + Metadata + RAG
+- SBERT + Metadata Filters improves MAP by +171.7% relative to the TF-IDF baseline.
+- Precision@10 improvement vs TF-IDF: +70.5%.
+- F1@10 improvement vs TF-IDF: +110.7%.
+- Paired t-test on per-query precision_at_10 (sbert vs tfidf, n=954): p=8.232e-29 (significant at α=0.05); Cohen's d=0.3728.
 
 ## Methodology Notes
 
