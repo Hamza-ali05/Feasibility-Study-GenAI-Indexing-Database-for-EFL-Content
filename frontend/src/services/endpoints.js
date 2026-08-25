@@ -86,10 +86,12 @@ export async function runExperiment(payload) {
 }
 
 export async function exportExperimentComparison(experimentIds) {
-  const { data } = await apiClient.post("/api/experiments/export-comparison", {
-    experiment_ids: experimentIds,
-  });
-  return data;
+  const response = await apiClient.post(
+    "/api/experiments/export-comparison",
+    { experiment_ids: experimentIds },
+    { responseType: "blob" }
+  );
+  return response.data;
 }
 
 export async function getExplainGlobal() {
@@ -340,9 +342,7 @@ export async function listReportSections() {
 }
 
 export async function getReportSection(filename) {
-  const { data } = await apiClient.get(
-    `/api/report/section/${encodeURIComponent(filename)}`
-  );
+  const { data } = await apiClient.get(`/api/report/section/${encodeURIComponent(filename)}`);
   return data;
 }
 
@@ -382,15 +382,14 @@ export async function downloadSecurityMarkdown() {
   return response.data;
 }
 
-// ── Dissertation Figures (admin) ──────────────────────────────────────
+// ── Project figures (admin) ───────────────────────────────────────────
 
-export async function listDissertationFigures() {
+export async function listProjectFigures() {
   const { data } = await apiClient.get("/api/figures/list");
   return data;
 }
 
-export async function exportDissertationFigures() {
+export async function exportProjectFigures() {
   const { data } = await apiClient.post("/api/figures/export");
   return data;
 }
-

@@ -13,6 +13,13 @@ Coded by www.creative-tim.com
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 */
 
+/** Dark sidebar = default dark gradient / darkMode sidenav (not white or light-transparent). */
+function isDarkSidenav({ transparentSidenav, whiteSidenav, darkMode }) {
+  if (whiteSidenav) return false;
+  if (transparentSidenav && !darkMode) return false;
+  return true;
+}
+
 function collapseItem(theme, ownerState) {
   const { palette, transitions, breakpoints, boxShadows, borders, functions } = theme;
   const { active, transparentSidenav, whiteSidenav, darkMode, sidenavColor } = ownerState;
@@ -21,15 +28,14 @@ function collapseItem(theme, ownerState) {
   const { md } = boxShadows;
   const { borderRadius } = borders;
   const { pxToRem, rgba, linearGradient } = functions;
+  const darkSidenav = isDarkSidenav({ transparentSidenav, whiteSidenav, darkMode });
 
   return {
     background: active
       ? linearGradient(gradients[sidenavColor].main, gradients[sidenavColor].state)
       : transparent.main,
-    color:
-      (transparentSidenav && !darkMode && !active) || (whiteSidenav && !active)
-        ? dark.main
-        : white.main,
+    // Dark sidebar: always white text; light sidebar: dark text (white when active)
+    color: darkSidenav || active ? white.main : dark.main,
     display: "flex",
     alignItems: "center",
     width: "100%",
@@ -52,10 +58,11 @@ function collapseItem(theme, ownerState) {
         let backgroundValue;
 
         if (!active) {
-          backgroundValue =
-            transparentSidenav && !darkMode
-              ? grey[300]
-              : rgba(whiteSidenav ? grey[400] : white.main, 0.2);
+          backgroundValue = darkSidenav
+            ? rgba(white.main, 0.2)
+            : transparentSidenav && !darkMode
+            ? grey[300]
+            : rgba(whiteSidenav ? grey[400] : white.main, 0.2);
         }
 
         return backgroundValue;
@@ -71,14 +78,13 @@ function collapseIconBox(theme, ownerState) {
   const { white, dark } = palette;
   const { borderRadius } = borders;
   const { pxToRem } = functions;
+  const darkSidenav = isDarkSidenav({ transparentSidenav, whiteSidenav, darkMode });
+  const iconColor = darkSidenav || active ? white.main : dark.main;
 
   return {
     minWidth: pxToRem(32),
     minHeight: pxToRem(32),
-    color:
-      (transparentSidenav && !darkMode && !active) || (whiteSidenav && !active)
-        ? dark.main
-        : white.main,
+    color: iconColor,
     borderRadius: borderRadius.md,
     display: "grid",
     placeItems: "center",
@@ -87,25 +93,30 @@ function collapseIconBox(theme, ownerState) {
       duration: transitions.duration.standard,
     }),
 
-    "& svg, svg g": {
-      color: transparentSidenav || whiteSidenav ? dark.main : white.main,
+    "& svg, svg g, & .MuiSvgIcon-root": {
+      color: `${iconColor} !important`,
+      fill: iconColor,
     },
   };
 }
 
-const collapseIcon = ({ palette: { white, gradients } }, { active }) => ({
-  color: active ? white.main : gradients.dark.state,
+const collapseIcon = ({ palette: { white, dark } }, { active, darkSidenav }) => ({
+  color: active || darkSidenav ? white.main : dark.main,
 });
 
 function collapseText(theme, ownerState) {
-  const { typography, transitions, breakpoints, functions } = theme;
-  const { miniSidenav, transparentSidenav, active } = ownerState;
+  const { typography, transitions, breakpoints, functions, palette } = theme;
+  const { miniSidenav, transparentSidenav, whiteSidenav, darkMode, active } = ownerState;
 
   const { size, fontWeightRegular, fontWeightLight } = typography;
   const { pxToRem } = functions;
+  const { white, dark } = palette;
+  const darkSidenav = isDarkSidenav({ transparentSidenav, whiteSidenav, darkMode });
+  const textColor = darkSidenav || active ? white.main : dark.main;
 
   return {
     marginLeft: pxToRem(10),
+    color: textColor,
 
     [breakpoints.up("xl")]: {
       opacity: miniSidenav || (miniSidenav && transparentSidenav) ? 0 : 1,
@@ -118,6 +129,7 @@ function collapseText(theme, ownerState) {
     },
 
     "& span": {
+      color: `${textColor} !important`,
       fontWeight: active ? fontWeightRegular : fontWeightLight,
       fontSize: size.sm,
       lineHeight: 0,
@@ -125,4 +137,4 @@ function collapseText(theme, ownerState) {
   };
 }
 
-export { collapseItem, collapseIconBox, collapseIcon, collapseText };
+export { collapseItem, collapseIconBox, collapseIcon, collapseText, isDarkSidenav };

@@ -72,6 +72,8 @@ def find_duplicates_for_vector(
     meta_by_id = MetadataStore().get_by_ids(meta_ids)
 
     out: list[dict[str, Any]] = []
+    from backend.services.taxonomy_labeler import display_title
+
     for hit in hits:
         rid = str(hit["id"])
         score = float(hit["score"])
@@ -80,11 +82,10 @@ def find_duplicates_for_vector(
         if score < float(threshold):
             continue
         meta = meta_by_id.get(rid) or {}
-        title = meta.get("title") or rid
         out.append(
             {
                 "resource_id": rid,
-                "title": str(title),
+                "title": display_title(meta),
                 "similarity": score,
             }
         )
@@ -269,21 +270,25 @@ def count_unresolved(threshold: float = NEAR_DUPLICATE_THRESHOLD) -> int:
 
 def enrich_pairs(pairs: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Attach titles / CEFR / skill for both sides from metadata."""
+    from backend.services.taxonomy_labeler import display_title, enrich_resource_display
+
     ids: list[str] = []
     for p in pairs:
         ids.extend([p["resource_id_a"], p["resource_id_b"]])
     meta = MetadataStore().get_by_ids(list(dict.fromkeys(ids)))
 
     def _side(rid: str) -> dict[str, Any]:
-        m = meta.get(rid) or {}
-        raw = str(m.get("raw_text") or "").strip()
+        m = enrich_resource_display(meta.get(rid) or {"resource_id": rid})
+        raw = str(m.get("raw_text") or m.get("raw_text_preview") or "").strip()
+        raw = raw.replace("\ufeff", "")
         snippet = (raw[:160] + "…") if len(raw) > 160 else raw
         return {
             "resource_id": rid,
-            "title": str(m.get("title") or rid),
+            "title": display_title(m),
             "cefr_level": m.get("cefr_level"),
             "skill_type": m.get("skill_type"),
             "topic_domain": m.get("topic_domain"),
+            "source_name": m.get("source_name"),
             "snippet": snippet,
         }
 

@@ -7,7 +7,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 class SearchQuery(BaseModel):
-    query: str
+    query: str = ""
     cefr_level: str | None = None
     skill_type: str | None = None
     topic_domain: str | None = None

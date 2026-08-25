@@ -13,7 +13,7 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import VerticalBarChart from "examples/Charts/BarCharts/VerticalBarChart";
 
-import { LiveIndicator, MetricCard, PipelineProgressBar } from "components/EflShared";
+import { LiveIndicator, MetricCard } from "components/EflShared";
 
 import { usePipeline } from "context/PipelineContext";
 import { getDashboardSummary } from "services/endpoints";
@@ -50,7 +50,6 @@ function relativeTime(iso, nowMs) {
 function Dashboard() {
   const {
     connected,
-    stages,
     stagesComplete,
     pipelineReady,
     setPipelineReady,
@@ -178,15 +177,6 @@ function Dashboard() {
             />
           </Grid>
         </Grid>
-
-        <Card sx={{ mb: 3 }}>
-          <MDBox p={2}>
-            <MDTypography variant="h6" mb={1.5}>
-              Pipeline stages
-            </MDTypography>
-            <PipelineProgressBar stages={stages} />
-          </MDBox>
-        </Card>
 
         <Grid container spacing={3} mb={3}>
           <Grid item xs={12} lg={7}>

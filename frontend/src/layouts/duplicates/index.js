@@ -15,7 +15,7 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 
-import { CefrBadge, SimilarityBar } from "components/EflShared";
+import { CefrBadge, SimilarityBar, TagBadge } from "components/EflShared";
 import { usePipeline } from "context/PipelineContext";
 import {
   getDuplicates,
@@ -44,10 +44,30 @@ function cefrOk(level) {
   return level && CEFR_LEVELS.includes(level);
 }
 
+function looksLikeUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    String(value || "").trim()
+  );
+}
+
+function humanTitle(resource, fallback) {
+  const title = String(resource?.title || "").trim();
+  if (title && !looksLikeUuid(title)) return title;
+  const snippet = String(resource?.snippet || resource?.raw_text_preview || "")
+    .replace(/\ufeff/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (snippet) return snippet.length > 80 ? `${snippet.slice(0, 79)}…` : snippet;
+  if (fallback && !looksLikeUuid(fallback)) return fallback;
+  return "Untitled resource";
+}
+
 function MiniResourceCard({ resource }) {
   const r = resource || {};
-  const title = r.title || r.resource_id || "Unknown resource";
-  const snippet = r.snippet || r.raw_text_preview || "";
+  const title = humanTitle(r);
+  const snippet = String(r.snippet || r.raw_text_preview || "")
+    .replace(/\ufeff/g, "")
+    .trim();
 
   return (
     <Card
@@ -59,15 +79,29 @@ function MiniResourceCard({ resource }) {
       }}
     >
       <MDBox p={1.5}>
-        <MDBox display="flex" alignItems="center" gap={1} mb={0.75} flexWrap="wrap">
-          <MDTypography variant="button" fontWeight="bold" sx={{ flex: 1, minWidth: 0 }}>
+        <MDBox display="flex" alignItems="flex-start" gap={1} mb={0.75} flexWrap="wrap">
+          <MDTypography
+            variant="button"
+            fontWeight="bold"
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+              lineHeight: 1.35,
+            }}
+          >
             {title}
           </MDTypography>
           {cefrOk(r.cefr_level) && <CefrBadge level={r.cefr_level} />}
         </MDBox>
-        <MDTypography variant="caption" color="text" display="block" mb={0.5}>
-          {r.resource_id}
-        </MDTypography>
+        <MDBox display="flex" flexWrap="wrap" gap={0.5} mb={0.75}>
+          {r.skill_type && <TagBadge text={r.skill_type} variant="skill" />}
+          {r.topic_domain && <TagBadge text={r.topic_domain} variant="topic" />}
+          {r.source_name && <TagBadge text={r.source_name} variant="source" />}
+        </MDBox>
         <MDTypography
           variant="caption"
           sx={{
@@ -78,7 +112,7 @@ function MiniResourceCard({ resource }) {
             overflow: "hidden",
           }}
         >
-          {snippet || "No snippet available."}
+          {snippet || "No preview available."}
         </MDTypography>
       </MDBox>
     </Card>
@@ -90,6 +124,9 @@ MiniResourceCard.propTypes = {
     resource_id: PropTypes.string,
     title: PropTypes.string,
     cefr_level: PropTypes.string,
+    skill_type: PropTypes.string,
+    topic_domain: PropTypes.string,
+    source_name: PropTypes.string,
     snippet: PropTypes.string,
     raw_text_preview: PropTypes.string,
   }),
@@ -110,18 +147,22 @@ function sideFromDetail(id, detail, fallbackTitle) {
   if (!detail) {
     return {
       resource_id: id,
-      title: fallbackTitle || id,
+      title: humanTitle({ title: fallbackTitle }, fallbackTitle),
       snippet: "",
     };
   }
   const raw = detail.raw_text_preview || detail.raw_text || "";
-  const snippet = raw.length > 160 ? `${String(raw).slice(0, 160)}…` : String(raw || "");
+  const cleaned = String(raw)
+    .replace(/\ufeff/g, "")
+    .trim();
+  const snippet = cleaned.length > 160 ? `${cleaned.slice(0, 160)}…` : cleaned;
   return {
     resource_id: detail.resource_id || id,
-    title: detail.title || id,
+    title: humanTitle({ title: detail.title, snippet: cleaned }, fallbackTitle),
     cefr_level: detail.cefr_level,
     skill_type: detail.skill_type,
     topic_domain: detail.topic_domain,
+    source_name: detail.source_name,
     snippet,
   };
 }

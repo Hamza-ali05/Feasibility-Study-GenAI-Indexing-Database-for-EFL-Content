@@ -35,6 +35,9 @@ export default styled(Drawer)(({ theme, ownerState }) => {
     backgroundValue = white.main;
   }
 
+  // Dark sidebar (default dark gradient / darkMode) — not white or light-transparent
+  const darkSidenav = !whiteSidenav && !(transparentSidenav && !darkMode);
+
   const drawerOpenStyles = () => ({
     background: backgroundValue,
     transform: "translateX(0)",
@@ -82,8 +85,22 @@ export default styled(Drawer)(({ theme, ownerState }) => {
     "& .MuiDrawer-paper": {
       boxShadow: xxl,
       border: "none",
-
       ...(miniSidenav ? drawerCloseStyles() : drawerOpenStyles()),
+      // Dark sidebar: keep labels, icons, and dropdown arrows always white
+      ...(darkSidenav
+        ? {
+            color: white.main,
+            "& a": { color: `${white.main} !important` },
+            "& .MuiTypography-root": { color: `${white.main} !important` },
+            "& .MuiSvgIcon-root": {
+              color: `${white.main} !important`,
+              fill: `${white.main} !important`,
+            },
+            "& .material-icons, & .material-icons-round": {
+              color: `${white.main} !important`,
+            },
+          }
+        : {}),
     },
   };
 });

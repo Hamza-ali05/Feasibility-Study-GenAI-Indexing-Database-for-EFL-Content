@@ -137,6 +137,20 @@ PIPELINE_STAGES = [
     "Predict",
 ]
 
-SUPPORTED_RAW_EXTENSIONS = {".csv", ".json", ".jsonl", ".txt", ".pdf"}
+SUPPORTED_RAW_EXTENSIONS = {
+    ".csv",
+    ".json",
+    ".jsonl",
+    ".txt",
+    ".pdf",
+    ".vtt",
+    ".srt",
+    ".mp3",
+    ".wav",
+    ".m4a",
+    ".ogg",
+    ".mp4",
+    ".webm",
+}
 
 RAW_IGNORE_NAMES = {".gitkeep", "README_PLACE_DATASETS_HERE.txt"}

@@ -4,7 +4,6 @@ import Card from "@mui/material/Card";
 import Chip from "@mui/material/Chip";
 import FormControl from "@mui/material/FormControl";
 import Grid from "@mui/material/Grid";
-import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import Skeleton from "@mui/material/Skeleton";
@@ -32,14 +31,95 @@ import DocumentPreviewModal from "components/EflShared/DocumentPreviewModal";
 import { getResources, getSearchFacets } from "services/endpoints";
 import colors from "assets/theme/base/colors";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 5;
 
-function facetOptions(facetMap) {
-  if (!facetMap || typeof facetMap !== "object") return [];
-  return Object.entries(facetMap)
-    .map(([value, count]) => ({ value, count: Number(count) || 0 }))
-    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+const CEFR_OPTIONS = [
+  { value: "A1", label: "A1 — Beginner" },
+  { value: "A2", label: "A2 — Elementary" },
+  { value: "B1", label: "B1 — Intermediate" },
+  { value: "B2", label: "B2 — Upper intermediate" },
+  { value: "C1", label: "C1 — Advanced" },
+  { value: "C2", label: "C2 — Proficiency" },
+];
+
+const SKILL_OPTIONS = [
+  { value: "Reading", label: "Reading" },
+  { value: "Writing", label: "Writing" },
+  { value: "Listening", label: "Listening" },
+  { value: "Speaking", label: "Speaking" },
+  { value: "Grammar", label: "Grammar" },
+  { value: "Vocabulary", label: "Vocabulary" },
+];
+
+const TOPIC_OPTIONS = [
+  { value: "Business", label: "Business" },
+  { value: "Science", label: "Science" },
+  { value: "Culture", label: "Culture" },
+  { value: "Technology", label: "Technology" },
+  { value: "Daily Life", label: "Daily life" },
+  { value: "Academic", label: "Academic" },
+  { value: "Travel", label: "Travel" },
+  { value: "Health", label: "Health" },
+];
+
+function humanizeFacetValue(raw) {
+  const text = String(raw || "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return "";
+  return text
+    .split(" ")
+    .map((word) => {
+      if (/^[A-Z]\d$/i.test(word)) return word.toUpperCase();
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(" ");
 }
+
+/** Always show canonical taxonomy; merge live facet counts when available. */
+function buildFilterOptions(canonical, facetMap) {
+  const counts = facetMap && typeof facetMap === "object" ? facetMap : {};
+  const seen = new Set();
+  const options = canonical.map((opt) => {
+    seen.add(opt.value);
+    return {
+      value: opt.value,
+      label: opt.label,
+      count: Number(counts[opt.value]) || 0,
+    };
+  });
+
+  Object.entries(counts).forEach(([value, count]) => {
+    if (!value || seen.has(value)) return;
+    options.push({
+      value,
+      label: humanizeFacetValue(value),
+      count: Number(count) || 0,
+    });
+  });
+
+  return options;
+}
+
+const selectMenuProps = {
+  PaperProps: {
+    sx: {
+      maxHeight: 280,
+      overflowY: "auto",
+    },
+  },
+  anchorOrigin: { vertical: "bottom", horizontal: "left" },
+  transformOrigin: { vertical: "top", horizontal: "left" },
+};
+
+const selectSx = {
+  "& .MuiSelect-select": {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+};
 
 function BrowseResources() {
   const [cefrLevel, setCefrLevel] = useState("");
@@ -121,9 +201,9 @@ function BrowseResources() {
     setPage(1);
   };
 
-  const cefrOpts = facetOptions(facets.cefr_level);
-  const skillOpts = facetOptions(facets.skill_type);
-  const topicOpts = facetOptions(facets.topic_domain);
+  const cefrOpts = buildFilterOptions(CEFR_OPTIONS, facets.cefr_level);
+  const skillOpts = buildFilterOptions(SKILL_OPTIONS, facets.skill_type);
+  const topicOpts = buildFilterOptions(TOPIC_OPTIONS, facets.topic_domain);
 
   const renderPageButtons = () => {
     const buttons = [];
@@ -154,62 +234,107 @@ function BrowseResources() {
         </MDTypography>
 
         <Card sx={{ p: 2, mb: 3 }}>
-          <Grid container spacing={2} alignItems="center">
+          <Grid container spacing={2} alignItems="flex-end">
             <Grid item xs={12} sm={4} md={3}>
+              <MDTypography
+                variant="caption"
+                fontWeight="medium"
+                color="text"
+                display="block"
+                mb={0.5}
+              >
+                CEFR level
+              </MDTypography>
               <FormControl fullWidth size="small">
-                <InputLabel id="browse-cefr">CEFR level</InputLabel>
                 <Select
-                  labelId="browse-cefr"
-                  label="CEFR level"
+                  displayEmpty
                   value={cefrLevel}
                   onChange={onFilterChange(setCefrLevel)}
+                  renderValue={(selected) => {
+                    if (!selected) return "Any level";
+                    const match = cefrOpts.find((o) => o.value === selected);
+                    return match?.label || selected;
+                  }}
+                  MenuProps={selectMenuProps}
+                  sx={selectSx}
                 >
                   <MenuItem value="">
-                    <em>Any</em>
+                    <em>Any level</em>
                   </MenuItem>
                   {cefrOpts.map((o) => (
                     <MenuItem key={o.value} value={o.value}>
-                      {o.value} ({o.count})
+                      {o.label}
+                      {o.count > 0 ? ` (${o.count})` : ""}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={4} md={3}>
+              <MDTypography
+                variant="caption"
+                fontWeight="medium"
+                color="text"
+                display="block"
+                mb={0.5}
+              >
+                Skill type
+              </MDTypography>
               <FormControl fullWidth size="small">
-                <InputLabel id="browse-skill">Skill type</InputLabel>
                 <Select
-                  labelId="browse-skill"
-                  label="Skill type"
+                  displayEmpty
                   value={skillType}
                   onChange={onFilterChange(setSkillType)}
+                  renderValue={(selected) => {
+                    if (!selected) return "Any skill";
+                    const match = skillOpts.find((o) => o.value === selected);
+                    return match?.label || selected;
+                  }}
+                  MenuProps={selectMenuProps}
+                  sx={selectSx}
                 >
                   <MenuItem value="">
-                    <em>Any</em>
+                    <em>Any skill</em>
                   </MenuItem>
                   {skillOpts.map((o) => (
                     <MenuItem key={o.value} value={o.value}>
-                      {o.value} ({o.count})
+                      {o.label}
+                      {o.count > 0 ? ` (${o.count})` : ""}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={4} md={3}>
+              <MDTypography
+                variant="caption"
+                fontWeight="medium"
+                color="text"
+                display="block"
+                mb={0.5}
+              >
+                Topic domain
+              </MDTypography>
               <FormControl fullWidth size="small">
-                <InputLabel id="browse-topic">Topic domain</InputLabel>
                 <Select
-                  labelId="browse-topic"
-                  label="Topic domain"
+                  displayEmpty
                   value={topicDomain}
                   onChange={onFilterChange(setTopicDomain)}
+                  renderValue={(selected) => {
+                    if (!selected) return "Any topic";
+                    const match = topicOpts.find((o) => o.value === selected);
+                    return match?.label || selected;
+                  }}
+                  MenuProps={selectMenuProps}
+                  sx={selectSx}
                 >
                   <MenuItem value="">
-                    <em>Any</em>
+                    <em>Any topic</em>
                   </MenuItem>
                   {topicOpts.map((o) => (
                     <MenuItem key={o.value} value={o.value}>
-                      {o.value} ({o.count})
+                      {o.label}
+                      {o.count > 0 ? ` (${o.count})` : ""}
                     </MenuItem>
                   ))}
                 </Select>
@@ -223,7 +348,7 @@ function BrowseResources() {
                   onClick={clearFilters}
                   size="small"
                   variant="outlined"
-                  sx={{ borderColor: colors.grey[300] }}
+                  sx={{ borderColor: colors.grey[300], mb: 0.25 }}
                 />
               </Grid>
             )}
@@ -290,33 +415,28 @@ function BrowseResources() {
                     const cefrOk =
                       item.cefr_level &&
                       ["A1", "A2", "B1", "B2", "C1", "C2"].includes(item.cefr_level);
+                    const skill = item.skill_type || "Reading";
+                    const topic = item.topic_domain || "Daily Life";
+                    const source = item.source_name || "EFL Index corpus";
                     return (
                       <TableRow key={item.resource_id}>
                         <DataTableBodyCell>
                           <MDTypography variant="button" fontWeight="medium">
-                            {item.title}
+                            {item.title || "Untitled resource"}
                           </MDTypography>
                         </DataTableBodyCell>
                         <DataTableBodyCell align="center">
                           {cefrOk ? <CefrBadge level={item.cefr_level} /> : "—"}
                         </DataTableBodyCell>
                         <DataTableBodyCell align="center">
-                          {item.skill_type ? (
-                            <TagBadge text={item.skill_type} variant="skill" />
-                          ) : (
-                            "—"
-                          )}
+                          <TagBadge text={skill} variant="skill" />
                         </DataTableBodyCell>
                         <DataTableBodyCell align="center">
-                          {item.topic_domain ? (
-                            <TagBadge text={item.topic_domain} variant="topic" />
-                          ) : (
-                            "—"
-                          )}
+                          <TagBadge text={topic} variant="topic" />
                         </DataTableBodyCell>
                         <DataTableBodyCell>
-                          <MDTypography variant="caption" color="text">
-                            {item.source_name || "—"}
+                          <MDTypography variant="caption" color="text" fontWeight="medium">
+                            {source}
                           </MDTypography>
                         </DataTableBodyCell>
                         <DataTableBodyCell align="right">
@@ -348,7 +468,7 @@ function BrowseResources() {
               sx={{ borderTop: `1px solid ${colors.grey[300]}` }}
             >
               <MDTypography variant="caption" color="text">
-                Page {page} of {totalPages}
+                Page {page} of {totalPages} · {PAGE_SIZE} per page
               </MDTypography>
               <MDPagination variant="gradient" color="primary">
                 <MDPagination

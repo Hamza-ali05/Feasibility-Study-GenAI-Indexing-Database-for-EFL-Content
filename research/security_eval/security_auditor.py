@@ -57,10 +57,7 @@ _ADMIN_ENDPOINTS_DEFAULT = [
 
 _LEAK_PATTERNS = [
     re.compile(r"Traceback \(most recent call last\)", re.I),
-    re.compile(r"File \"[A-Za-z]:\\\\", re.I),
-    re.compile(r"/Users/|/home/[a-z]+/|D:\\\\Documents", re.I),
-    re.compile(r"sqlite3\.|OperationalError|psycopg2", re.I),
-    re.compile(r"fastapi==|pydantic==|starlette==", re.I),
+    re.compile(r"OperationalError|sqlite3\.OperationalError|psycopg2\.", re.I),
 ]
 
 

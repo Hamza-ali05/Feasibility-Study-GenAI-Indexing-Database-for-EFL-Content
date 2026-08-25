@@ -163,11 +163,16 @@ function SecurityEvaluation() {
   const loadReport = useCallback(async () => {
     try {
       const data = await getSecurityReport();
-      setReport(data);
+      if (data && data.available === false) {
+        setReport(null);
+      } else {
+        setReport(data);
+      }
       setError(null);
     } catch (err) {
       if (err?.response?.status === 404) {
         setReport(null);
+        setError(null);
       } else {
         const detail = err?.response?.data?.detail || err?.message || "Failed to load report";
         setError(typeof detail === "string" ? detail : JSON.stringify(detail));
@@ -248,7 +253,14 @@ function SecurityEvaluation() {
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox py={3}>
-        <MDBox display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1} mb={2}>
+        <MDBox
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          flexWrap="wrap"
+          gap={1}
+          mb={2}
+        >
           <MDBox>
             <MDTypography variant="h4" fontWeight="bold">
               Security Evaluation
@@ -304,11 +316,20 @@ function SecurityEvaluation() {
           </MDBox>
         ) : (
           <>
+            {!report && !status.running && (
+              <MDBox mb={2}>
+                <MDAlert color="info">
+                  No security audit report yet. Click <strong>Run Security Audit</strong> to
+                  generate OWASP-aligned results for this API.
+                </MDAlert>
+              </MDBox>
+            )}
+
             <MDBox display="flex" flexWrap="wrap" gap={2} mb={3}>
-              <SummaryCard title="Total Tests" value={summary.total_tests} />
-              <SummaryCard title="Passed" value={summary.passed} color="success" />
-              <SummaryCard title="Failed" value={summary.failed} color="error" />
-              <SummaryCard title="Warnings" value={summary.warnings} color="warning" />
+              <SummaryCard title="Total Tests" value={summary.total_tests ?? 0} />
+              <SummaryCard title="Passed" value={summary.passed ?? 0} color="success" />
+              <SummaryCard title="Failed" value={summary.failed ?? 0} color="error" />
+              <SummaryCard title="Warnings" value={summary.warnings ?? 0} color="warning" />
             </MDBox>
 
             <Card sx={{ p: 2, mb: 3 }}>

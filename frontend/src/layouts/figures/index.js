@@ -1,5 +1,5 @@
 /**
- * Dissertation Figures — generate and download Phase 13 diagrams.
+ * Project figures — generate and download Phase 13 diagrams.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -17,7 +17,7 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 
-import { exportDissertationFigures, listDissertationFigures } from "services/endpoints";
+import { exportProjectFigures, listProjectFigures } from "services/endpoints";
 import { API_URL } from "services/apiClient";
 import colors from "assets/theme/base/colors";
 
@@ -42,7 +42,7 @@ function FiguresPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await listDissertationFigures();
+      const data = await listProjectFigures();
       setFiles(data.files || []);
     } catch (err) {
       const detail = err?.response?.data?.detail || err?.message || "Failed to list figures";
@@ -60,7 +60,7 @@ function FiguresPage() {
     setBusy(true);
     setError(null);
     try {
-      await exportDissertationFigures();
+      await exportProjectFigures();
       await refresh();
     } catch (err) {
       const detail = err?.response?.data?.detail || err?.message || "Export failed";
@@ -86,7 +86,7 @@ function FiguresPage() {
         >
           <MDBox>
             <MDTypography variant="h4" fontWeight="bold">
-              Dissertation Figures
+              Project figures
             </MDTypography>
             <MDTypography variant="button" color="text">
               Architecture, DFD, pipeline, sequence, and classification diagrams (PNG + SVG).

@@ -6,19 +6,15 @@ import Accordion from "@mui/material/Accordion";
 import AccordionDetails from "@mui/material/AccordionDetails";
 import AccordionSummary from "@mui/material/AccordionSummary";
 import Card from "@mui/material/Card";
-import Checkbox from "@mui/material/Checkbox";
 import CircularProgress from "@mui/material/CircularProgress";
-import FormControlLabel from "@mui/material/FormControlLabel";
 import Grid from "@mui/material/Grid";
 import Link from "@mui/material/Link";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ListItemText from "@mui/material/ListItemText";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -45,6 +41,45 @@ import { API_URL } from "services/apiClient";
 import colors from "assets/theme/base/colors";
 
 const CEFR_ORDER = ["A1", "A2", "B1", "B2", "C1", "C2"];
+const EXPORT_TABLE_ROWS = 5;
+
+/** Soft UI theme sets TableHead to display:block — restore real table layout. */
+const ALIGNED_TABLE_SX = {
+  width: "100%",
+  tableLayout: "auto",
+  borderCollapse: "collapse",
+  "& .MuiTableHead-root": {
+    display: "table-header-group",
+    padding: 0,
+    borderRadius: 0,
+  },
+  "& .MuiTableBody-root": {
+    display: "table-row-group",
+  },
+  "& .MuiTableRow-root": {
+    display: "table-row",
+  },
+  "& .MuiTableCell-root": {
+    display: "table-cell",
+    verticalAlign: "middle",
+  },
+};
+
+const ALIGNED_HEAD_CELL_SX = {
+  fontWeight: 700,
+  whiteSpace: "nowrap",
+  borderBottom: `1px solid ${colors.grey[300]}`,
+  py: 1,
+  px: 1.5,
+};
+
+const ALIGNED_BODY_CELL_SX = {
+  whiteSpace: "nowrap",
+  borderBottom: `1px solid ${colors.grey[200]}`,
+  py: 0.85,
+  px: 1.5,
+  verticalAlign: "middle",
+};
 
 function staticUrl(path) {
   if (!path) return "";
@@ -52,6 +87,273 @@ function staticUrl(path) {
   const base = (API_URL || "http://localhost:8000").replace(/\/$/, "");
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
+
+function fileExt(filename) {
+  const name = String(filename || "");
+  const i = name.lastIndexOf(".");
+  return i >= 0 ? name.slice(i + 1).toLowerCase() : "";
+}
+
+function prettyExportTitle(filename) {
+  const base = String(filename || "")
+    .replace(/\.(csv|png|tex|jpg|jpeg|webp)$/i, "")
+    .replace(/[_-]+/g, " ")
+    .trim();
+  if (!base) return "Export";
+  return base
+    .split(" ")
+    .map((w) => {
+      if (/^(sbert|tfidf|cefr|png|csv|roc|pr)$/i.test(w)) return w.toUpperCase();
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    })
+    .join(" ");
+}
+
+function parseCsv(text) {
+  const raw = String(text || "")
+    .replace(/^\uFEFF/, "")
+    .trim();
+  if (!raw) return [];
+  return raw
+    .split(/\r?\n/)
+    .filter((line) => line.trim().length > 0)
+    .map((line) => {
+      const cells = [];
+      let cur = "";
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i += 1) {
+        const ch = line[i];
+        if (ch === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            cur += '"';
+            i += 1;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (ch === "," && !inQuotes) {
+          cells.push(cur.trim());
+          cur = "";
+        } else {
+          cur += ch;
+        }
+      }
+      cells.push(cur.trim());
+      return cells;
+    });
+}
+
+function ExportCsvTable({ file, href }) {
+  const [rows, setRows] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setError(null);
+      setRows(null);
+      try {
+        const res = await fetch(href, { credentials: "omit" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
+        if (!cancelled) setRows(parseCsv(text));
+      } catch (err) {
+        if (!cancelled) setError(err?.message || "Failed to load CSV");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [href]);
+
+  const header = rows && rows.length > 0 ? rows[0] : [];
+  const colCount = header.length;
+  const body =
+    rows && rows.length > 1
+      ? rows.slice(1, 1 + EXPORT_TABLE_ROWS).map((row) => {
+          const padded = [...row];
+          while (padded.length < colCount) padded.push("");
+          return padded.slice(0, colCount);
+        })
+      : [];
+  const totalDataRows = rows && rows.length > 1 ? rows.length - 1 : 0;
+
+  return (
+    <Card sx={{ p: 2, height: "100%" }}>
+      <MDBox display="flex" justifyContent="space-between" alignItems="flex-start" gap={1} mb={1.5}>
+        <MDBox>
+          <MDTypography variant="h6">{prettyExportTitle(file.filename)}</MDTypography>
+          <MDTypography variant="caption" color="text">
+            {file.filename}
+            {totalDataRows > EXPORT_TABLE_ROWS
+              ? ` · showing ${EXPORT_TABLE_ROWS} of ${totalDataRows} rows`
+              : totalDataRows > 0
+              ? ` · ${totalDataRows} row${totalDataRows === 1 ? "" : "s"}`
+              : ""}
+          </MDTypography>
+        </MDBox>
+        <Link href={href} target="_blank" rel="noopener noreferrer" underline="hover">
+          <MDTypography variant="caption" fontWeight="medium" color="info">
+            Download CSV
+          </MDTypography>
+        </Link>
+      </MDBox>
+
+      {error && (
+        <MDTypography variant="caption" color="error">
+          {error}
+        </MDTypography>
+      )}
+      {!error && !rows && (
+        <MDBox display="flex" justifyContent="center" py={2}>
+          <CircularProgress size={22} />
+        </MDBox>
+      )}
+      {rows && rows.length === 0 && (
+        <MDTypography variant="caption" color="text">
+          Empty table.
+        </MDTypography>
+      )}
+      {rows && rows.length > 0 && (
+        <TableContainer sx={{ maxWidth: "100%", overflowX: "auto" }}>
+          <Table size="small" sx={ALIGNED_TABLE_SX}>
+            <TableHead>
+              <TableRow>
+                {header.map((cell, idx) => (
+                  <TableCell
+                    key={`h-${idx}`}
+                    align={idx === 0 ? "left" : "left"}
+                    sx={ALIGNED_HEAD_CELL_SX}
+                  >
+                    {cell || "—"}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {body.map((row, rIdx) => (
+                <TableRow key={`r-${rIdx}`}>
+                  {header.map((_, cIdx) => (
+                    <TableCell key={`c-${rIdx}-${cIdx}`} sx={ALIGNED_BODY_CELL_SX}>
+                      {row[cIdx] || "—"}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+    </Card>
+  );
+}
+
+ExportCsvTable.propTypes = {
+  file: PropTypes.shape({
+    filename: PropTypes.string,
+  }).isRequired,
+  href: PropTypes.string.isRequired,
+};
+
+function PublicationExportsPanel({ files, fileHref }) {
+  const images = useMemo(() => (files || []).filter((f) => fileExt(f.filename) === "png"), [files]);
+  const tables = useMemo(() => (files || []).filter((f) => fileExt(f.filename) === "csv"), [files]);
+
+  if (!files?.length) return null;
+
+  return (
+    <Card sx={{ p: 2, mb: 2 }}>
+      <MDTypography variant="h6" mb={2}>
+        Publication exports
+      </MDTypography>
+
+      {images.length > 0 && (
+        <MDBox mb={3}>
+          <MDTypography variant="button" fontWeight="bold" display="block" mb={1.5}>
+            Figures ({images.length})
+          </MDTypography>
+          <Grid container spacing={2}>
+            {images.map((file) => {
+              const href = fileHref(file);
+              return (
+                <Grid item xs={12} sm={6} md={4} key={file.filename || href}>
+                  <Card
+                    variant="outlined"
+                    sx={{
+                      p: 1.5,
+                      height: "100%",
+                      borderColor: colors.grey[300],
+                      backgroundColor: colors.grey[100],
+                    }}
+                  >
+                    <MDTypography variant="button" fontWeight="medium" display="block" mb={1}>
+                      {prettyExportTitle(file.filename)}
+                    </MDTypography>
+                    <MDBox
+                      component="a"
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      display="block"
+                      sx={{
+                        borderRadius: 1,
+                        overflow: "hidden",
+                        border: `1px solid ${colors.grey[300]}`,
+                        backgroundColor: "#fff",
+                      }}
+                    >
+                      <MDBox
+                        component="img"
+                        src={href}
+                        alt={file.filename}
+                        sx={{
+                          display: "block",
+                          width: "100%",
+                          height: 220,
+                          objectFit: "contain",
+                          backgroundColor: "#fff",
+                        }}
+                      />
+                    </MDBox>
+                    <MDBox mt={1} display="flex" justifyContent="space-between" alignItems="center">
+                      <MDTypography variant="caption" color="text" sx={{ wordBreak: "break-all" }}>
+                        {file.filename}
+                      </MDTypography>
+                      <Link href={href} target="_blank" rel="noopener noreferrer" underline="hover">
+                        <MDTypography variant="caption" color="info" fontWeight="medium">
+                          Open
+                        </MDTypography>
+                      </Link>
+                    </MDBox>
+                  </Card>
+                </Grid>
+              );
+            })}
+          </Grid>
+        </MDBox>
+      )}
+
+      {tables.length > 0 && (
+        <MDBox>
+          <MDTypography variant="button" fontWeight="bold" display="block" mb={1.5}>
+            Tables ({tables.length})
+          </MDTypography>
+          <Grid container spacing={2}>
+            {tables.map((file) => (
+              <Grid item xs={12} lg={6} key={file.filename}>
+                <ExportCsvTable file={file} href={fileHref(file)} />
+              </Grid>
+            ))}
+          </Grid>
+        </MDBox>
+      )}
+    </Card>
+  );
+}
+
+PublicationExportsPanel.propTypes = {
+  files: PropTypes.arrayOf(PropTypes.object).isRequired,
+  fileHref: PropTypes.func.isRequired,
+};
 
 function hexToRgb(hex) {
   const h = hex.replace("#", "");
@@ -98,7 +400,7 @@ function cefrOk(level) {
 
 function ConfusionMatrix({ title, matrix, labels }) {
   const labelList = Array.isArray(labels) && labels.length > 0 ? labels : CEFR_ORDER;
-  const rows = Array.isArray(matrix) ? matrix : [];
+  const rows = useMemo(() => (Array.isArray(matrix) ? matrix : []), [matrix]);
   const maxVal = useMemo(() => {
     let m = 0;
     rows.forEach((row) => {
@@ -441,22 +743,22 @@ function ExplainGlobalTab() {
             Top 20 SHAP features
           </MDTypography>
           <Card sx={{ overflowX: "auto" }}>
-            <Table size="small">
+            <Table size="small" sx={ALIGNED_TABLE_SX}>
               <TableHead>
                 <TableRow>
-                  <TableCell>Rank</TableCell>
-                  <TableCell>Feature / dim</TableCell>
-                  <TableCell>Mean |SHAP|</TableCell>
+                  <TableCell sx={ALIGNED_HEAD_CELL_SX}>Rank</TableCell>
+                  <TableCell sx={ALIGNED_HEAD_CELL_SX}>Feature / dim</TableCell>
+                  <TableCell sx={ALIGNED_HEAD_CELL_SX}>Mean |SHAP|</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {features.slice(0, 20).map((f, i) => (
                   <TableRow key={f.dimension_index ?? f.feature ?? i}>
-                    <TableCell>{f.rank ?? i + 1}</TableCell>
-                    <TableCell>
+                    <TableCell sx={ALIGNED_BODY_CELL_SX}>{f.rank ?? i + 1}</TableCell>
+                    <TableCell sx={ALIGNED_BODY_CELL_SX}>
                       {f.feature || f.name || `dim_${f.dimension_index ?? "?"}`}
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={ALIGNED_BODY_CELL_SX}>
                       {fmt(f.mean_abs_shap_global ?? f.importance ?? f.mean_abs_shap)}
                     </TableCell>
                   </TableRow>
@@ -580,20 +882,22 @@ function ExplainLocalTab() {
                   </MDAlert>
                 </MDBox>
               )}
-              <Table size="small">
+              <Table size="small" sx={ALIGNED_TABLE_SX}>
                 <TableHead>
                   <TableRow>
-                    <TableCell>approx_token</TableCell>
-                    <TableCell>Dim</TableCell>
-                    <TableCell>Weight</TableCell>
+                    <TableCell sx={ALIGNED_HEAD_CELL_SX}>approx_token</TableCell>
+                    <TableCell sx={ALIGNED_HEAD_CELL_SX}>Dim</TableCell>
+                    <TableCell sx={ALIGNED_HEAD_CELL_SX}>Weight</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {features.map((f, fi) => (
                     <TableRow key={`${f.dim}-${fi}`}>
-                      <TableCell>{f.approx_token || "—"}</TableCell>
-                      <TableCell>{f.dim ?? "—"}</TableCell>
-                      <TableCell>{f.weight != null ? Number(f.weight).toFixed(4) : "—"}</TableCell>
+                      <TableCell sx={ALIGNED_BODY_CELL_SX}>{f.approx_token || "—"}</TableCell>
+                      <TableCell sx={ALIGNED_BODY_CELL_SX}>{f.dim ?? "—"}</TableCell>
+                      <TableCell sx={ALIGNED_BODY_CELL_SX}>
+                        {f.weight != null ? Number(f.weight).toFixed(4) : "—"}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -766,13 +1070,6 @@ function Metrics() {
     return "#";
   };
 
-  const formatSize = (bytes) => {
-    const n = Number(bytes) || 0;
-    if (n < 1024) return `${n} B`;
-    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-    return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
   return (
     <DashboardLayout>
       <DashboardNavbar />
@@ -824,50 +1121,7 @@ function Metrics() {
         )}
 
         {exportFiles.length > 0 && (
-          <Card sx={{ p: 2, mb: 2 }}>
-            <MDTypography variant="h6" mb={1}>
-              Publication exports ({exportFiles.length})
-            </MDTypography>
-            <MDTypography variant="caption" color="text" display="block" mb={1}>
-              Download CSV / LaTeX / PNG tables for the dissertation (admin session required to
-              regenerate).
-            </MDTypography>
-            <List dense disablePadding>
-              {exportFiles.map((file) => (
-                <ListItem
-                  key={file.filename || file.path}
-                  disableGutters
-                  secondaryAction={
-                    <MDTypography variant="caption" color="text">
-                      {formatSize(file.size)}
-                    </MDTypography>
-                  }
-                >
-                  <FormControlLabel
-                    control={<Checkbox defaultChecked size="small" disableRipple />}
-                    label={
-                      <ListItemText
-                        primary={
-                          <Link
-                            href={fileDownloadHref(file)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            underline="hover"
-                          >
-                            {file.filename}
-                          </Link>
-                        }
-                        secondary={
-                          file.last_modified ? `Modified ${file.last_modified}` : undefined
-                        }
-                      />
-                    }
-                    sx={{ alignItems: "flex-start", m: 0, width: "100%" }}
-                  />
-                </ListItem>
-              ))}
-            </List>
-          </Card>
+          <PublicationExportsPanel files={exportFiles} fileHref={fileDownloadHref} />
         )}
 
         <Card>

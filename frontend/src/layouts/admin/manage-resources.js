@@ -48,11 +48,78 @@ import { SKILL_TYPES, TOPIC_DOMAINS } from "assets/theme/base/eflLabels";
 const PAGE_SIZE = 20;
 const MANUAL_LABEL_MS = 10 * 60 * 1000;
 
-function facetOptions(facetMap) {
-  if (!facetMap || typeof facetMap !== "object") return [];
-  return Object.entries(facetMap)
-    .map(([value, count]) => ({ value, count: Number(count) || 0 }))
-    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+const CEFR_OPTIONS = [
+  { value: "A1", label: "A1 — Beginner" },
+  { value: "A2", label: "A2 — Elementary" },
+  { value: "B1", label: "B1 — Intermediate" },
+  { value: "B2", label: "B2 — Upper intermediate" },
+  { value: "C1", label: "C1 — Advanced" },
+  { value: "C2", label: "C2 — Proficiency" },
+];
+
+const SKILL_OPTIONS = SKILL_TYPES.map((value) => ({ value, label: value }));
+const TOPIC_OPTIONS = TOPIC_DOMAINS.map((value) => ({
+  value,
+  label: value === "Daily Life" ? "Daily life" : value,
+}));
+
+const selectMenuProps = {
+  PaperProps: {
+    sx: {
+      maxHeight: 280,
+      overflowY: "auto",
+    },
+  },
+  anchorOrigin: { vertical: "bottom", horizontal: "left" },
+  transformOrigin: { vertical: "top", horizontal: "left" },
+};
+
+const selectSx = {
+  "& .MuiSelect-select": {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+};
+
+function humanizeFacetValue(raw) {
+  const text = String(raw || "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return "";
+  return text
+    .split(" ")
+    .map((word) => {
+      if (/^[A-Z]\d$/i.test(word)) return word.toUpperCase();
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(" ");
+}
+
+/** Always show canonical taxonomy; merge live facet counts when available. */
+function buildFilterOptions(canonical, facetMap) {
+  const counts = facetMap && typeof facetMap === "object" ? facetMap : {};
+  const seen = new Set();
+  const options = canonical.map((opt) => {
+    seen.add(opt.value);
+    return {
+      value: opt.value,
+      label: opt.label,
+      count: Number(counts[opt.value]) || 0,
+    };
+  });
+
+  Object.entries(counts).forEach(([value, count]) => {
+    if (!value || seen.has(value)) return;
+    options.push({
+      value,
+      label: humanizeFacetValue(value),
+      count: Number(count) || 0,
+    });
+  });
+
+  return options;
 }
 
 function isLabelEditable(item, nowMs) {
@@ -279,9 +346,9 @@ function ManageResources() {
     }
   };
 
-  const cefrOpts = facetOptions(facets.cefr_level);
-  const skillOpts = facetOptions(facets.skill_type);
-  const topicOpts = facetOptions(facets.topic_domain);
+  const cefrOpts = buildFilterOptions(CEFR_OPTIONS, facets.cefr_level);
+  const skillOpts = buildFilterOptions(SKILL_OPTIONS, facets.skill_type);
+  const topicOpts = buildFilterOptions(TOPIC_OPTIONS, facets.topic_domain);
 
   const renderPageButtons = () => {
     const buttons = [];
@@ -303,71 +370,108 @@ function ManageResources() {
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox py={3}>
-        <MDTypography variant="h4" fontWeight="bold" mb={0.5}>
-          Manage Resources
-        </MDTypography>
-        <MDTypography variant="button" color="text" mb={3} display="block">
-          Admin catalogue — delete indexed resources; edit skill/topic within the 10-minute analyzer
-          window
-        </MDTypography>
-
         <Card sx={{ p: 2, mb: 3 }}>
-          <Grid container spacing={2} alignItems="center">
+          <Grid container spacing={2} alignItems="flex-end">
             <Grid item xs={12} sm={4} md={3}>
+              <MDTypography
+                variant="caption"
+                fontWeight="medium"
+                color="text"
+                display="block"
+                mb={0.5}
+              >
+                CEFR level
+              </MDTypography>
               <FormControl fullWidth size="small">
-                <InputLabel id="admin-cefr">CEFR level</InputLabel>
                 <Select
-                  labelId="admin-cefr"
-                  label="CEFR level"
+                  displayEmpty
                   value={cefrLevel}
                   onChange={onFilterChange(setCefrLevel)}
+                  renderValue={(selected) => {
+                    if (!selected) return "Any level";
+                    const match = cefrOpts.find((o) => o.value === selected);
+                    return match?.label || selected;
+                  }}
+                  MenuProps={selectMenuProps}
+                  sx={selectSx}
                 >
                   <MenuItem value="">
-                    <em>Any</em>
+                    <em>Any level</em>
                   </MenuItem>
                   {cefrOpts.map((o) => (
                     <MenuItem key={o.value} value={o.value}>
-                      {o.value} ({o.count})
+                      {o.label}
+                      {o.count > 0 ? ` (${o.count})` : ""}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={4} md={3}>
+              <MDTypography
+                variant="caption"
+                fontWeight="medium"
+                color="text"
+                display="block"
+                mb={0.5}
+              >
+                Skill type
+              </MDTypography>
               <FormControl fullWidth size="small">
-                <InputLabel id="admin-skill">Skill type</InputLabel>
                 <Select
-                  labelId="admin-skill"
-                  label="Skill type"
+                  displayEmpty
                   value={skillType}
                   onChange={onFilterChange(setSkillType)}
+                  renderValue={(selected) => {
+                    if (!selected) return "Any skill";
+                    const match = skillOpts.find((o) => o.value === selected);
+                    return match?.label || selected;
+                  }}
+                  MenuProps={selectMenuProps}
+                  sx={selectSx}
                 >
                   <MenuItem value="">
-                    <em>Any</em>
+                    <em>Any skill</em>
                   </MenuItem>
                   {skillOpts.map((o) => (
                     <MenuItem key={o.value} value={o.value}>
-                      {o.value} ({o.count})
+                      {o.label}
+                      {o.count > 0 ? ` (${o.count})` : ""}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={4} md={3}>
+              <MDTypography
+                variant="caption"
+                fontWeight="medium"
+                color="text"
+                display="block"
+                mb={0.5}
+              >
+                Topic domain
+              </MDTypography>
               <FormControl fullWidth size="small">
-                <InputLabel id="admin-topic">Topic domain</InputLabel>
                 <Select
-                  labelId="admin-topic"
-                  label="Topic domain"
+                  displayEmpty
                   value={topicDomain}
                   onChange={onFilterChange(setTopicDomain)}
+                  renderValue={(selected) => {
+                    if (!selected) return "Any topic";
+                    const match = topicOpts.find((o) => o.value === selected);
+                    return match?.label || selected;
+                  }}
+                  MenuProps={selectMenuProps}
+                  sx={selectSx}
                 >
                   <MenuItem value="">
-                    <em>Any</em>
+                    <em>Any topic</em>
                   </MenuItem>
                   {topicOpts.map((o) => (
                     <MenuItem key={o.value} value={o.value}>
-                      {o.value} ({o.count})
+                      {o.label}
+                      {o.count > 0 ? ` (${o.count})` : ""}
                     </MenuItem>
                   ))}
                 </Select>
@@ -381,7 +485,7 @@ function ManageResources() {
                   onClick={clearFilters}
                   size="small"
                   variant="outlined"
-                  sx={{ borderColor: colors.grey[300] }}
+                  sx={{ borderColor: colors.grey[300], mb: 0.25 }}
                 />
               </Grid>
             )}

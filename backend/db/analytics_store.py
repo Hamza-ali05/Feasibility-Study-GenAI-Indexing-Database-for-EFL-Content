@@ -297,7 +297,7 @@ class AnalyticsStore:
 
     def most_viewed_resources(self, limit: int = 10) -> list[dict[str, Any]]:
         """
-        Top viewed resources with titles joined from MetadataStore
+        Top viewed resources with human-readable titles joined from MetadataStore
         (Prompt 4-Q — frontend should not stitch IDs to titles).
         """
         with self._connect() as conn:
@@ -314,23 +314,44 @@ class AnalyticsStore:
             ).fetchall()
 
         ids = [str(r["resource_id"]) for r in rows]
-        titles: dict[str, str] = {}
+        meta_by_id: dict[str, dict[str, Any]] = {}
         if ids:
-
             from backend.db.metadata_store import MetadataStore
+            from backend.services.taxonomy_labeler import enrich_resource_display
 
-            meta_by_id = MetadataStore().get_by_ids(ids)
-            for rid, meta in meta_by_id.items():
-                title = meta.get("title")
-                if title is not None and str(title).strip():
-                    titles[str(rid)] = str(title).strip()
+            raw_meta = MetadataStore().get_by_ids(ids)
+            for rid, meta in raw_meta.items():
+                meta_by_id[str(rid)] = enrich_resource_display(meta)
 
-        return [
-            {
-                "resource_id": str(r["resource_id"]),
-                "title": titles.get(str(r["resource_id"])) or str(r["resource_id"]),
-                "views": int(r["views"]),
-                "last_viewed": r["last_viewed"],
-            }
-            for r in rows
-        ]
+        out: list[dict[str, Any]] = []
+        for r in rows:
+            rid = str(r["resource_id"])
+            meta = meta_by_id.get(rid) or {}
+            title = meta.get("title")
+            if title is not None and str(title).strip():
+                display_title = str(title).strip()
+            else:
+                preview = str(
+                    meta.get("raw_text_preview")
+                    or meta.get("raw_text")
+                    or meta.get("raw_text_full")
+                    or ""
+                ).strip()
+                # Drop BOM / collapse whitespace for a short readable title
+                preview = preview.replace("\ufeff", "").replace("\n", " ").replace("\r", " ")
+                preview = " ".join(preview.split())
+                display_title = (preview[:80] + ("…" if len(preview) > 80 else "")) if preview else "Untitled resource"
+
+            out.append(
+                {
+                    "resource_id": rid,
+                    "title": display_title,
+                    "cefr_level": meta.get("cefr_level"),
+                    "skill_type": meta.get("skill_type"),
+                    "topic_domain": meta.get("topic_domain"),
+                    "source_name": meta.get("source_name"),
+                    "views": int(r["views"]),
+                    "last_viewed": r["last_viewed"],
+                }
+            )
+        return out

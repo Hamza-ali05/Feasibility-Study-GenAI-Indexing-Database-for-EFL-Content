@@ -1,0 +1,69 @@
+{
+  "rag_samples": 10,
+  "rag_attempted": 10,
+  "models": [
+    "extractive-rag-fallback"
+  ],
+  "samples": [
+    {
+      "question": "Find an A2 reading about travel and airports.",
+      "answer": "According to \"Look for background information by exploring the field of research you will be\u2026\": Look for background information by exploring the field of research you will be working in and by reading available publications. According to \"6044 H. Barber The Aeroplane Speaks. Fifth Edition http://www.gutenberg.org/fil\u2026\": Fifth Edition http://www.gutenberg.org/files/21791/21791-h/21791-h.htm gutenberg 1916 Info mid PD G 1 1 \"The Aeroplane had been designed and built, and tested in the air, and now it stood on the Aerodrome ready for its first 'cross-country flight. According to \"Places to visit\"",
+      "model": "extractive-rag-fallback",
+      "n_sources": 5
+    },
+    {
+      "question": "I need B1 grammar practice on the past simple.",
+      "answer": "According to \"People can learn about the past by talking to people who remember things that h\u2026\": People can learn about the past by talking to people who remember things that happened in the past. According to \"1191 H. Irving Hancock \"The Grammar School Boys of Gridley\": Irving Hancock \"The Grammar School Boys of Gridley According to \"Career commitment\": first i did think about in then i writer on paper in then i reditr like 5 time because if i need to put some more wreds in then i typed on computer in then i writer agen because makeshor to i did sepilt corekt in then i redie my sentences to m",
+      "model": "extractive-rag-fallback",
+      "n_sources": 5
+    },
+    {
+      "question": "Recommend a listening dialogue at the doctor's.",
+      "answer": "According to \"DOCTOR BIRCH AND HIS YOUNG FRIENDS\": Well, he has a very crisp gown and bands, a solemn aspect, a tremendous loud voice, and a grand air with the boys' parents; whom he receives in a study covered round with the best-bound books, which imposes upon many\u2014upon the women especially\u2014and makes them fancy that this is a Doctor indeed. According to \"\"\"I think,\"\" suggested the Doctor, \"\"that the best way would be for you to have\u2026\": \"\"I think,\"\" suggested the Doctor, \"\"that the best way would be for you to have a regular trial on the subject, and hear the evidence. According to \"\"\"I think",
+      "model": "extractive-rag-fallback",
+      "n_sources": 5
+    },
+    {
+      "question": "What vocabulary should B2 students learn about health?",
+      "answer": "According to \"Lunch menus\": For example, most of the students should stared eating healthy food, so it can produce less people to get sick from consuming animals meat. According to \"Lunch menus\": Schools cafeteria should change to a healthier school lunch because students can have a healthy diet, have energy and a healthy body. According to \"Lessons with elementary school students\": I would give a lesson to elementary students about P.E. According to \"Lunch menus\": Because i think these can help students to not be sick or have the capacity to walk by their self .",
+      "model": "extractive-rag-fallback",
+      "n_sources": 5
+    },
+    {
+      "question": "Give a short classroom activity for speaking at A2.",
+      "answer": "According to \"Cell phones in classrooms\": I am a student, and I like to use my cell phone in the classroom because I can use it for research, presentations, and communication. According to \"Cell phones in classrooms\": First, I like to use my cell phone in classroom because I can research for information. According to \"Mandatory extracurricular activities\": i am not fully agree to this extracurricular activity thing that is going around this school, because when i was a mere child. According to \"Cell phones in classrooms\": Cell phones in Schools Using a cell phone in school can be helpful for s",
+      "model": "extractive-rag-fallback",
+      "n_sources": 5
+    },
+    {
+      "question": "Find academic English reading for university students.",
+      "answer": "According to \"Travel grant Are you a first-year or second-year student at Central University?\u2026\": Central University offers funding of up to \u00a3800 each for five students to go overseas and study English, Spanish, French, German or Chinese.* You can use the grant to pay for accommodation, travel expenses and tuition fees. According to \"Cell phones in classrooms\": I am agree with students to use their cell phone in the classroom because some students came to the United State with not knowing any words in English, and even of a student that born in the United State or their native language is Engli",
+      "model": "extractive-rag-fallback",
+      "n_sources": 5
+    },
+    {
+      "question": "Suggest a culture lesson about festivals.",
+      "answer": "According to \"Write about the following topic.Most people have forgotten the meaning behind traditional or religious festivals; during festival periods, people nowadays only want to enjoy themselves.To what extent do you agree or disagree with this opinion?Give reasons for your answer and include any relevant examples from your own knowledge or experience.\": As the years go by, it can be clearly seen that our minds are starting to abandon the true meaning of a nation's religious and traditional festivals by replacing with something that is not even related to the legend behind the festival. Ac",
+      "model": "extractive-rag-fallback",
+      "n_sources": 5
+    },
+    {
+      "question": "How can I teach business email writing at B1?",
+      "answer": "According to \"Internships and shadowing\": I am writing this letter to who ever this may pertain to, because I have questions about a potential internship at your business. According to \"Impact of technology\": Using technology makes our work easy and faster, it makes easy and fast by sending email, so that way some important documents the we send to our partners or coworkers without going to there office or making a meeting and these is because using email and we are saving tim\u2026 According to \"Internships and shadowing\": Students should have partnerships because students can get more skills abou",
+      "model": "extractive-rag-fallback",
+      "n_sources": 5
+    },
+    {
+      "question": "Is there a science text suitable for B1 readers?",
+      "answer": "According to \"Enjoyable educational activities\": science experiment on thing like chemical change like color In my science classroom my teacher experiment on fire change color that is chemical change science love their job that is the enjoy for be science identify thing on the earth like plot that is not a is not plant science go to school to be what they are today they want to be science that was their dream they become methodological activity their discipline study. According to \"A Monthly Magazine for Youngest Readers\" http://www.gutenberg.org/files/28140/2\u2026\": A Monthly Magazine for Younges",
+      "model": "extractive-rag-fallback",
+      "n_sources": 5
+    },
+    {
+      "question": "Find daily-life dialogues about shopping.",
+      "answer": "According to \"Some people say that modern technology has made shopping today easier, while others disagree. Discuss both views and give your opinion\": Nowadays, modern technology has been created to help people in several aspects of their daily lives, one of them being shopping. According to \"Some people say that modern technology has made shopping today easier, while others disagree. Discuss both views and give your opinion\": A number of people are of the opinion that it is preferable to choose an online shopping according to some modernisations in technology, while others contend that the tr",
+      "model": "extractive-rag-fallback",
+      "n_sources": 5
+    }
+  ]
+}

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 from typing import Any
+import re
 
 from backend.db.metadata_store import MetadataStore
 from backend.db.vector_store import get_vector_store
@@ -122,62 +123,99 @@ def _raise_anthropic_error(exc: Exception) -> None:
         ) from exc
     raise ValueError(f"Anthropic API request failed: {exc}") from exc
 
+def extractive_answer(question: str, contexts: list[dict[str, Any]]) -> str:
+    """Grounded answer from retrieved excerpts when a generative API is unavailable.
+
+    Sentences from indexed resources are ranked by overlap with the question.
+    This is still RAG (retrieve-then-read); it does not invent facts.
+    """
+    if not contexts:
+        return (
+            "I don't have enough information in the indexed EFL resources to answer that."
+        )
+    q_tokens = {t.lower() for t in re.findall(r"[a-zA-Z']{3,}", question or "")}
+    scored: list[tuple[int, str, str]] = []
+    for ctx in contexts:
+        title = str(ctx.get("title") or "Untitled")
+        snippet = str(ctx.get("text_snippet") or ctx.get("raw_text") or "")
+        for sent in re.split(r"(?<=[.!?])\s+", snippet):
+            sent = sent.strip()
+            if len(sent) < 40:
+                continue
+            toks = {t.lower() for t in re.findall(r"[a-zA-Z']{3,}", sent)}
+            overlap = len(q_tokens & toks)
+            scored.append((overlap, title, sent))
+    scored.sort(key=lambda row: (-row[0], -len(row[2])))
+    picked = scored[:4] if scored else []
+    if not picked:
+        bits = []
+        for ctx in contexts[:3]:
+            title = str(ctx.get("title") or "Untitled")
+            snippet = str(ctx.get("text_snippet") or "")[:320]
+            if snippet:
+                bits.append(f'According to "{title}": {snippet}')
+        return " ".join(bits) or (
+            "I don't have enough information in the indexed EFL resources to answer that."
+        )
+    lines = [
+        f'According to "{title}": {sent}'
+        for _ov, title, sent in picked
+    ]
+    return " ".join(lines)
+
+
 def ask(question: str, top_k: int = 5) -> dict[str, Any]:
-    """Retrieve context and call Anthropic once; return answer + sources + model."""
-    api_key = _require_api_key()
-    model = Config.RAG_MODEL
+    """Retrieve context, try Claude, then fall back to extractive RAG."""
     contexts = retrieve_context(question, top_k=top_k)
+    model = getattr(Config, "RAG_MODEL", None) or getattr(Config, "RAG_MODEL", "claude")
     prompt = build_prompt(question, contexts)
 
     try:
+        api_key = _require_api_key()
         from anthropic import Anthropic, APIError
-    except ImportError as exc:
-        raise ValueError(
-            "The anthropic package is not installed. "
-            "Install backend requirements to enable RAG."
-        ) from exc
 
-    client = Anthropic(api_key=api_key)
-    logger.info("RAG ask: calling Anthropic model=%s…", model)
-    try:
+        client = Anthropic(api_key=api_key)
+        logger.info("RAG ask: calling Anthropic model=%s…", model)
         message = client.messages.create(
             model=model,
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
         )
-    except APIError as exc:
-        logger.warning("Anthropic API error: %s", exc)
-        _raise_anthropic_error(exc)
-
-    logger.info("RAG ask: Anthropic response received")
-    parts = []
-    for block in message.content:
-        text = getattr(block, "text", None)
-        if text:
-            parts.append(text)
-    answer = "".join(parts).strip() or (
-        "I don't have enough information in the indexed EFL resources to answer that."
-    )
-    logger.info("RAG ask model=%s sources=%s", model, len(contexts))
-    return {"answer": answer, "sources": contexts, "model": model}
+        parts = []
+        for block in message.content:
+            text = getattr(block, "text", None)
+            if text:
+                parts.append(text)
+        answer = "".join(parts).strip() or (
+            "I don't have enough information in the indexed EFL resources to answer that."
+        )
+        logger.info("RAG ask model=%s sources=%s", model, len(contexts))
+        return {"answer": answer, "sources": contexts, "model": model}
+    except Exception as exc:
+        logger.warning("Generative RAG unavailable (%s); using extractive fallback", exc)
+        answer = extractive_answer(question, contexts)
+        return {
+            "answer": answer,
+            "sources": contexts,
+            "model": "extractive-rag-fallback",
+            "fallback_reason": str(exc),
+        }
 
 async def ask_stream(question: str, top_k: int = 5) -> AsyncGenerator[str, None]:
     """Same grounding as ``ask``, streaming answer tokens via Anthropic."""
-    api_key = _require_api_key()
-    model = Config.RAG_MODEL
     contexts = retrieve_context(question, top_k=top_k)
     prompt = build_prompt(question, contexts)
+    model = getattr(Config, "RAG_MODEL", None) or getattr(Config, "RAG_MODEL", "claude")
+    try:
+        api_key = _require_api_key()
+    except Exception:
+        yield extractive_answer(question, contexts)
+        return
 
     try:
         from anthropic import APIError, AsyncAnthropic
-    except ImportError as exc:
-        raise ValueError(
-            "The anthropic package is not installed. "
-            "Install backend requirements to enable RAG."
-        ) from exc
 
-    client = AsyncAnthropic(api_key=api_key)
-    try:
+        client = AsyncAnthropic(api_key=api_key)
         async with client.messages.stream(
             model=model,
             max_tokens=1024,
@@ -186,6 +224,6 @@ async def ask_stream(question: str, top_k: int = 5) -> AsyncGenerator[str, None]
             async for text in stream.text_stream:
                 if text:
                     yield text
-    except APIError as exc:
-        logger.warning("Anthropic stream API error: %s", exc)
-        _raise_anthropic_error(exc)
+    except Exception as exc:
+        logger.warning("Generative RAG stream unavailable (%s); extractive fallback", exc)
+        yield extractive_answer(question, contexts)

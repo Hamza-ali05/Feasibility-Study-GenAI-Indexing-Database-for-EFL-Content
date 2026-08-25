@@ -21,9 +21,10 @@ import Footer from "examples/Footer";
 import DefaultLineChart from "examples/Charts/LineCharts/DefaultLineChart";
 import VerticalBarChart from "examples/Charts/BarCharts/VerticalBarChart";
 
-import { MetricCard } from "components/EflShared";
+import { CefrBadge, MetricCard, TagBadge } from "components/EflShared";
 import { usePipeline } from "context/PipelineContext";
 import { getAnalyticsSummary, getSearchesPerDay } from "services/endpoints";
+import { humanizeSearchQuery } from "utils/humanizeSearchQuery";
 import colors from "assets/theme/base/colors";
 
 const FILTER_LABELS = [
@@ -31,6 +32,55 @@ const FILTER_LABELS = [
   { key: "skill_type", label: "Skill type" },
   { key: "topic_domain", label: "Topic domain" },
 ];
+
+/** Soft UI theme sets TableHead to display:block — restore column alignment. */
+const ALIGNED_TABLE_SX = {
+  width: "100%",
+  tableLayout: "fixed",
+  borderCollapse: "collapse",
+  "& .MuiTableHead-root": {
+    display: "table-header-group",
+    padding: 0,
+    borderRadius: 0,
+  },
+  "& .MuiTableBody-root": {
+    display: "table-row-group",
+  },
+  "& .MuiTableRow-root": {
+    display: "table-row",
+  },
+  "& .MuiTableCell-root": {
+    display: "table-cell",
+    verticalAlign: "middle",
+  },
+};
+
+const HEAD_CELL_SX = {
+  fontWeight: 700,
+  whiteSpace: "nowrap",
+  borderBottom: `1px solid ${colors.grey[300]}`,
+  py: 1,
+  px: 1.25,
+};
+
+const BODY_CELL_SX = {
+  borderBottom: `1px solid ${colors.grey[200]}`,
+  py: 1,
+  px: 1.25,
+  verticalAlign: "middle",
+};
+
+function looksLikeUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    String(value || "").trim()
+  );
+}
+
+function humanTitle(row) {
+  const title = String(row?.title || "").trim();
+  if (title && !looksLikeUuid(title)) return title;
+  return "Untitled resource";
+}
 
 function activityKey(item) {
   return `${item.type || ""}|${item.timestamp || ""}|${item.query || ""}|${
@@ -233,7 +283,7 @@ function Analytics() {
                         <ListItemText
                           primary={
                             <MDTypography variant="button" fontWeight="medium">
-                              {row.query || "—"}
+                              {humanizeSearchQuery(row.query)}
                             </MDTypography>
                           }
                         />
@@ -277,7 +327,7 @@ function Analytics() {
                         <ListItemText
                           primary={
                             <MDTypography variant="button" fontWeight="medium">
-                              {row.query || "—"}
+                              {humanizeSearchQuery(row.query)}
                             </MDTypography>
                           }
                         />
@@ -312,34 +362,67 @@ function Analytics() {
                   </MDTypography>
                 ) : (
                   <MDBox sx={{ overflowX: "auto" }}>
-                    <Table size="small">
+                    <Table size="small" sx={ALIGNED_TABLE_SX}>
                       <TableHead>
                         <TableRow>
-                          <TableCell>Resource ID</TableCell>
-                          <TableCell>Title</TableCell>
-                          <TableCell align="right">Views</TableCell>
+                          <TableCell sx={{ ...HEAD_CELL_SX, width: "52%" }}>Title</TableCell>
+                          <TableCell sx={{ ...HEAD_CELL_SX, width: "32%" }}>Labels</TableCell>
+                          <TableCell align="right" sx={{ ...HEAD_CELL_SX, width: "16%" }}>
+                            Views
+                          </TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {mostViewed.map((row) => (
-                          <TableRow key={row.resource_id}>
-                            <TableCell>
-                              <MDTypography variant="caption" fontWeight="medium">
-                                {row.resource_id}
-                              </MDTypography>
-                            </TableCell>
-                            <TableCell>
-                              <MDTypography variant="button">
-                                {row.title || row.resource_id}
-                              </MDTypography>
-                            </TableCell>
-                            <TableCell align="right">
-                              <MDTypography variant="button" fontWeight="bold">
-                                {row.views}
-                              </MDTypography>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {mostViewed.map((row) => {
+                          const cefrOk =
+                            row.cefr_level &&
+                            ["A1", "A2", "B1", "B2", "C1", "C2"].includes(row.cefr_level);
+                          return (
+                            <TableRow key={row.resource_id}>
+                              <TableCell sx={BODY_CELL_SX}>
+                                <MDTypography
+                                  variant="button"
+                                  fontWeight="medium"
+                                  sx={{
+                                    display: "-webkit-box",
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: "vertical",
+                                    overflow: "hidden",
+                                    lineHeight: 1.35,
+                                  }}
+                                >
+                                  {humanTitle(row)}
+                                </MDTypography>
+                                {row.source_name && (
+                                  <MDTypography variant="caption" color="text" display="block">
+                                    {row.source_name}
+                                  </MDTypography>
+                                )}
+                              </TableCell>
+                              <TableCell sx={BODY_CELL_SX}>
+                                <MDBox display="flex" flexWrap="wrap" gap={0.5}>
+                                  {cefrOk && <CefrBadge level={row.cefr_level} />}
+                                  {row.skill_type && (
+                                    <TagBadge text={row.skill_type} variant="skill" />
+                                  )}
+                                  {row.topic_domain && (
+                                    <TagBadge text={row.topic_domain} variant="topic" />
+                                  )}
+                                  {!cefrOk && !row.skill_type && !row.topic_domain && (
+                                    <MDTypography variant="caption" color="text">
+                                      —
+                                    </MDTypography>
+                                  )}
+                                </MDBox>
+                              </TableCell>
+                              <TableCell align="right" sx={BODY_CELL_SX}>
+                                <MDTypography variant="button" fontWeight="bold">
+                                  {row.views}
+                                </MDTypography>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </MDBox>

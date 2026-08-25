@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 
 import Card from "@mui/material/Card";
 
@@ -17,7 +17,6 @@ import bgImage from "assets/images/bg-sign-in-basic.jpeg";
 function SignIn() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -25,8 +24,7 @@ function SignIn() {
   const [submitting, setSubmitting] = useState(false);
 
   if (isAuthenticated) {
-    const dest = location.state?.from?.pathname || "/admin/overview";
-    return <Navigate to={dest} replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   const handleSubmit = async (event) => {
@@ -35,7 +33,7 @@ function SignIn() {
     setSubmitting(true);
     try {
       await login(username.trim(), password);
-      navigate("/admin/overview", { replace: true });
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       const detail = err?.response?.data?.detail || err?.message || "Sign in failed";
       setError(typeof detail === "string" ? detail : JSON.stringify(detail));

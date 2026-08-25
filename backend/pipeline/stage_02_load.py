@@ -155,6 +155,10 @@ def _load_one(entry: dict) -> tuple[pd.DataFrame, dict]:
         df = _load_txt(abs_path, encoding)
     elif ext == ".pdf":
         df = _load_pdf(abs_path)
+    elif ext in {".vtt", ".srt", ".mp3", ".wav", ".m4a", ".ogg", ".mp4", ".webm"}:
+        from backend.services.media_ingest import load_media_file
+
+        df = load_media_file(abs_path, rel)
     else:
         raise ValueError(f"Unsupported extension for Load stage: {ext}")
 

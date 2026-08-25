@@ -4,7 +4,6 @@ import { Link as RouterLink, useSearchParams } from "react-router-dom";
 import Card from "@mui/material/Card";
 import Chip from "@mui/material/Chip";
 import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import Skeleton from "@mui/material/Skeleton";
@@ -33,11 +32,79 @@ import colors from "assets/theme/base/colors";
 
 const SUGGEST_DEBOUNCE_MS = 250;
 
-function facetOptions(facetMap) {
-  if (!facetMap || typeof facetMap !== "object") return [];
-  return Object.entries(facetMap)
-    .map(([value, count]) => ({ value, count: Number(count) || 0 }))
-    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+/** Canonical CEFR levels used by the CEFR classifier / pipeline. */
+const CEFR_OPTIONS = [
+  { value: "A1", label: "A1 — Beginner" },
+  { value: "A2", label: "A2 — Elementary" },
+  { value: "B1", label: "B1 — Intermediate" },
+  { value: "B2", label: "B2 — Upper intermediate" },
+  { value: "C1", label: "C1 — Advanced" },
+  { value: "C2", label: "C2 — Proficiency" },
+];
+
+/** Skill types used by analyzer / resource labeling. */
+const SKILL_OPTIONS = [
+  { value: "Reading", label: "Reading" },
+  { value: "Writing", label: "Writing" },
+  { value: "Listening", label: "Listening" },
+  { value: "Speaking", label: "Speaking" },
+  { value: "Grammar", label: "Grammar" },
+  { value: "Vocabulary", label: "Vocabulary" },
+];
+
+/** Topic domains used by analyzer / resource labeling. */
+const TOPIC_OPTIONS = [
+  { value: "Business", label: "Business" },
+  { value: "Science", label: "Science" },
+  { value: "Culture", label: "Culture" },
+  { value: "Technology", label: "Technology" },
+  { value: "Daily Life", label: "Daily life" },
+  { value: "Academic", label: "Academic" },
+  { value: "Travel", label: "Travel" },
+  { value: "Health", label: "Health" },
+];
+
+function humanizeFacetValue(raw) {
+  const text = String(raw || "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return "";
+  return text
+    .split(" ")
+    .map((word) => {
+      if (/^[A-Z]\d$/i.test(word)) return word.toUpperCase();
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(" ");
+}
+
+/**
+ * Merge trained taxonomy with live facet counts.
+ * Always shows canonical values even when metadata facets are empty.
+ */
+function buildFilterOptions(canonical, facetMap) {
+  const counts = facetMap && typeof facetMap === "object" ? facetMap : {};
+  const seen = new Set();
+  const options = canonical.map((opt) => {
+    seen.add(opt.value);
+    return {
+      value: opt.value,
+      label: opt.label,
+      count: Number(counts[opt.value]) || 0,
+    };
+  });
+
+  Object.entries(counts).forEach(([value, count]) => {
+    if (!value || seen.has(value)) return;
+    options.push({
+      value,
+      label: humanizeFacetValue(value),
+      count: Number(count) || 0,
+    });
+  });
+
+  return options;
 }
 
 function Search() {
@@ -95,10 +162,24 @@ function Search() {
   };
 
   const runSearch = useCallback(
-    async (overrideQuery) => {
-      const q = (overrideQuery !== undefined ? overrideQuery : query).trim();
-      if (!q) {
-        setError("Enter a search query.");
+    async (overrideQuery, filterOverrides = null) => {
+      const typed = (overrideQuery !== undefined ? overrideQuery : query).trim();
+      const nextCefr =
+        filterOverrides && Object.prototype.hasOwnProperty.call(filterOverrides, "cefrLevel")
+          ? filterOverrides.cefrLevel
+          : cefrLevel;
+      const nextSkill =
+        filterOverrides && Object.prototype.hasOwnProperty.call(filterOverrides, "skillType")
+          ? filterOverrides.skillType
+          : skillType;
+      const nextTopic =
+        filterOverrides && Object.prototype.hasOwnProperty.call(filterOverrides, "topicDomain")
+          ? filterOverrides.topicDomain
+          : topicDomain;
+      const hasFilters = Boolean(nextCefr || nextSkill || nextTopic);
+
+      if (!typed && !hasFilters) {
+        setError("Enter a search query, or choose at least one filter (CEFR, skill, or topic).");
         return;
       }
 
@@ -109,12 +190,12 @@ function Search() {
 
       try {
         const payload = {
-          query: q,
+          query: typed,
           top_k: 10,
         };
-        if (cefrLevel) payload.cefr_level = cefrLevel;
-        if (skillType) payload.skill_type = skillType;
-        if (topicDomain) payload.topic_domain = topicDomain;
+        if (nextCefr) payload.cefr_level = nextCefr;
+        if (nextSkill) payload.skill_type = nextSkill;
+        if (nextTopic) payload.topic_domain = nextTopic;
 
         const data = await searchResources(payload);
         setResults(Array.isArray(data?.results) ? data.results : []);
@@ -160,7 +241,11 @@ function Search() {
       try {
         const list = await getSuggestions(q);
         if (seq !== suggestSeq.current) return;
-        const next = Array.isArray(list) ? list.slice(0, 5) : [];
+        const next = (Array.isArray(list) ? list : [])
+          .map((item) => (typeof item === "string" ? item : item?.title || ""))
+          .map((t) => String(t).trim())
+          .filter(Boolean)
+          .slice(0, 5);
         setSuggestions(next);
         setShowSuggestions(next.length > 0);
       } catch (err) {
@@ -179,37 +264,52 @@ function Search() {
   };
 
   const pickSuggestion = (title) => {
-    setQuery(title);
+    const selected = String(title || "").trim();
+    if (!selected) return;
+    if (suggestTimer.current) clearTimeout(suggestTimer.current);
+    suggestSeq.current += 1;
+    setQuery(selected);
     setShowSuggestions(false);
     setSuggestions([]);
-    runSearch(title);
+    runSearch(selected);
   };
 
   const handleKeyDown = (event) => {
+    if (event.key === "Escape") {
+      setShowSuggestions(false);
+      return;
+    }
+    if (event.key === "ArrowDown" && suggestions.length > 0) {
+      event.preventDefault();
+      setShowSuggestions(true);
+      return;
+    }
     if (event.key === "Enter") {
       event.preventDefault();
+      setShowSuggestions(false);
       runSearch();
     }
   };
 
-  const cefrOpts = facetOptions(facets.cefr_level);
-  const skillOpts = facetOptions(facets.skill_type);
-  const topicOpts = facetOptions(facets.topic_domain);
+  const cefrOpts = buildFilterOptions(CEFR_OPTIONS, facets.cefr_level);
+  const skillOpts = buildFilterOptions(SKILL_OPTIONS, facets.skill_type);
+  const topicOpts = buildFilterOptions(TOPIC_OPTIONS, facets.topic_domain);
 
   return (
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox py={3}>
-        <MDTypography variant="h4" fontWeight="bold" mb={0.5}>
-          AI Semantic Search
-        </MDTypography>
-        <MDTypography variant="button" color="text" mb={3} display="block">
-          Search the indexed EFL corpus with Smart Filters
-        </MDTypography>
-
+        <MDBox mb={3} px={0.5}>
+          <MDTypography variant="h4" fontWeight="bold">
+            Search
+          </MDTypography>
+          <MDTypography variant="button" color="text">
+            Semantic search across indexed EFL resources
+          </MDTypography>
+        </MDBox>
         <Card sx={{ p: 2, mb: 2, position: "relative", zIndex: 2 }}>
           <ClickAwayListener onClickAway={() => setShowSuggestions(false)}>
-            <MDBox position="relative">
+            <MDBox position="relative" zIndex={showSuggestions ? 40 : 1}>
               <MDBox display="flex" gap={1} alignItems="flex-start">
                 <MDBox flex={1}>
                   <MDInput
@@ -220,7 +320,13 @@ function Search() {
                     onChange={handleQueryChange}
                     onKeyDown={handleKeyDown}
                     onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                    autoComplete="off"
                     placeholder="e.g. grammar exercises A2"
+                    inputProps={{
+                      "aria-autocomplete": "list",
+                      "aria-expanded": showSuggestions,
+                      role: "combobox",
+                    }}
                   />
                 </MDBox>
                 <MDButton
@@ -233,26 +339,39 @@ function Search() {
                 </MDButton>
               </MDBox>
 
-              {showSuggestions && (
+              {showSuggestions && suggestions.length > 0 && (
                 <Paper
-                  elevation={4}
+                  elevation={8}
+                  role="listbox"
                   sx={{
                     position: "absolute",
                     left: 0,
                     right: { xs: 0, sm: "7rem" },
                     top: "100%",
                     mt: 0.5,
-                    zIndex: 20,
-                    maxHeight: 240,
+                    zIndex: 50,
+                    maxHeight: 280,
                     overflowY: "auto",
+                    bgcolor: "background.paper",
                   }}
                 >
                   <List dense disablePadding>
-                    {suggestions.map((title) => (
-                      <ListItemButton key={title} onClick={() => pickSuggestion(title)}>
+                    {suggestions.map((title, index) => (
+                      <ListItemButton
+                        key={`${title}-${index}`}
+                        role="option"
+                        dense
+                        sx={{ cursor: "pointer", py: 1.1 }}
+                        // mousedown: select before blur/click-away unmounts the list
+                        onMouseDown={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          pickSuggestion(title);
+                        }}
+                      >
                         <ListItemText
                           primary={title}
-                          primaryTypographyProps={{ variant: "body2" }}
+                          primaryTypographyProps={{ variant: "body2", noWrap: true }}
                         />
                       </ListItemButton>
                     ))}
@@ -262,62 +381,152 @@ function Search() {
             </MDBox>
           </ClickAwayListener>
 
-          <Grid container spacing={2} mt={0.5} alignItems="center">
+          <Grid container spacing={2} mt={1} alignItems="flex-end">
             <Grid item xs={12} sm={4} md={3}>
+              <MDTypography
+                variant="caption"
+                fontWeight="medium"
+                color="text"
+                display="block"
+                mb={0.5}
+              >
+                CEFR level
+              </MDTypography>
               <FormControl fullWidth size="small">
-                <InputLabel id="filter-cefr">CEFR level</InputLabel>
                 <Select
-                  labelId="filter-cefr"
-                  label="CEFR level"
+                  displayEmpty
                   value={cefrLevel}
                   onChange={(e) => setCefrLevel(e.target.value)}
+                  renderValue={(selected) => {
+                    if (!selected) return "Any level";
+                    const match = cefrOpts.find((o) => o.value === selected);
+                    return match?.label || selected;
+                  }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        maxHeight: 280,
+                        overflowY: "auto",
+                      },
+                    },
+                    anchorOrigin: { vertical: "bottom", horizontal: "left" },
+                    transformOrigin: { vertical: "top", horizontal: "left" },
+                  }}
+                  sx={{
+                    "& .MuiSelect-select": {
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    },
+                  }}
                 >
                   <MenuItem value="">
-                    <em>Any</em>
+                    <em>Any level</em>
                   </MenuItem>
                   {cefrOpts.map((o) => (
                     <MenuItem key={o.value} value={o.value}>
-                      {o.value} ({o.count})
+                      {o.label}
+                      {o.count > 0 ? ` (${o.count})` : ""}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={4} md={3}>
+              <MDTypography
+                variant="caption"
+                fontWeight="medium"
+                color="text"
+                display="block"
+                mb={0.5}
+              >
+                Skill type
+              </MDTypography>
               <FormControl fullWidth size="small">
-                <InputLabel id="filter-skill">Skill type</InputLabel>
                 <Select
-                  labelId="filter-skill"
-                  label="Skill type"
+                  displayEmpty
                   value={skillType}
                   onChange={(e) => setSkillType(e.target.value)}
+                  renderValue={(selected) => {
+                    if (!selected) return "Any skill";
+                    const match = skillOpts.find((o) => o.value === selected);
+                    return match?.label || selected;
+                  }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        maxHeight: 280,
+                        overflowY: "auto",
+                      },
+                    },
+                    anchorOrigin: { vertical: "bottom", horizontal: "left" },
+                    transformOrigin: { vertical: "top", horizontal: "left" },
+                  }}
+                  sx={{
+                    "& .MuiSelect-select": {
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    },
+                  }}
                 >
                   <MenuItem value="">
-                    <em>Any</em>
+                    <em>Any skill</em>
                   </MenuItem>
                   {skillOpts.map((o) => (
                     <MenuItem key={o.value} value={o.value}>
-                      {o.value} ({o.count})
+                      {o.label}
+                      {o.count > 0 ? ` (${o.count})` : ""}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={4} md={3}>
+              <MDTypography
+                variant="caption"
+                fontWeight="medium"
+                color="text"
+                display="block"
+                mb={0.5}
+              >
+                Topic domain
+              </MDTypography>
               <FormControl fullWidth size="small">
-                <InputLabel id="filter-topic">Topic domain</InputLabel>
                 <Select
-                  labelId="filter-topic"
-                  label="Topic domain"
+                  displayEmpty
                   value={topicDomain}
                   onChange={(e) => setTopicDomain(e.target.value)}
+                  renderValue={(selected) => {
+                    if (!selected) return "Any topic";
+                    const match = topicOpts.find((o) => o.value === selected);
+                    return match?.label || selected;
+                  }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        maxHeight: 280,
+                        overflowY: "auto",
+                      },
+                    },
+                    anchorOrigin: { vertical: "bottom", horizontal: "left" },
+                    transformOrigin: { vertical: "top", horizontal: "left" },
+                  }}
+                  sx={{
+                    "& .MuiSelect-select": {
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    },
+                  }}
                 >
                   <MenuItem value="">
-                    <em>Any</em>
+                    <em>Any topic</em>
                   </MenuItem>
                   {topicOpts.map((o) => (
                     <MenuItem key={o.value} value={o.value}>
-                      {o.value} ({o.count})
+                      {o.label}
+                      {o.count > 0 ? ` (${o.count})` : ""}
                     </MenuItem>
                   ))}
                 </Select>
@@ -330,7 +539,7 @@ function Search() {
                   onDelete={clearFilters}
                   onClick={clearFilters}
                   size="small"
-                  sx={{ borderColor: colors.grey[300] }}
+                  sx={{ borderColor: colors.grey[300], mb: 0.25 }}
                   variant="outlined"
                 />
               </Grid>
@@ -397,10 +606,90 @@ function Search() {
           </MDBox>
         )}
 
-        {!loading && results && results.length === 0 && !pipelineAlert && (
-          <MDTypography variant="button" color="text">
-            No results. Try a broader query or clear filters.
-          </MDTypography>
+        {!loading && results && results.length === 0 && !pipelineAlert && !error && (
+          <Card
+            sx={{
+              p: { xs: 3, md: 4 },
+              textAlign: "center",
+              background: `linear-gradient(165deg, ${colors.grey[100]} 0%, #fff 55%, ${colors.grey[200]} 100%)`,
+              border: `1px solid ${colors.grey[300]}`,
+            }}
+          >
+            <MDBox
+              mx="auto"
+              mb={2}
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              sx={{
+                width: 64,
+                height: 64,
+                borderRadius: "50%",
+                backgroundColor: colors.info.main,
+                color: colors.white.main,
+                fontSize: "1.5rem",
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+              }}
+            >
+              0
+            </MDBox>
+            <MDTypography variant="h5" fontWeight="bold" gutterBottom>
+              No matching resources
+            </MDTypography>
+            <MDTypography variant="body2" color="text" sx={{ maxWidth: 480, mx: "auto", mb: 2 }}>
+              {filtersActive
+                ? "Nothing in the index matches this combination of filters yet. Try clearing one filter, broadening the CEFR level, or adding a short search phrase."
+                : "We could not find resources for that query. Try different keywords, or use CEFR / skill / topic filters to browse the collection."}
+            </MDTypography>
+            {(filtersActive || Boolean(query.trim())) && (
+              <MDBox display="flex" flexWrap="wrap" gap={1} justifyContent="center" mb={2.5}>
+                {query.trim() && (
+                  <Chip size="small" label={`Query: ${query.trim()}`} variant="outlined" />
+                )}
+                {cefrLevel && (
+                  <Chip
+                    size="small"
+                    label={CEFR_OPTIONS.find((o) => o.value === cefrLevel)?.label || cefrLevel}
+                    color="info"
+                    variant="outlined"
+                  />
+                )}
+                {skillType && (
+                  <Chip size="small" label={skillType} color="info" variant="outlined" />
+                )}
+                {topicDomain && (
+                  <Chip size="small" label={topicDomain} color="info" variant="outlined" />
+                )}
+              </MDBox>
+            )}
+            <MDBox display="flex" gap={1} justifyContent="center" flexWrap="wrap">
+              {filtersActive && (
+                <MDButton variant="outlined" color="dark" size="small" onClick={clearFilters}>
+                  Clear filters
+                </MDButton>
+              )}
+              <MDButton
+                variant="gradient"
+                color="info"
+                size="small"
+                onClick={() => {
+                  const sample = "english reading practice";
+                  setQuery(sample);
+                  setCefrLevel("");
+                  setSkillType("Reading");
+                  setTopicDomain("");
+                  runSearch(sample, {
+                    cefrLevel: "",
+                    skillType: "Reading",
+                    topicDomain: "",
+                  });
+                }}
+              >
+                Try a sample search
+              </MDButton>
+            </MDBox>
+          </Card>
         )}
 
         {!loading &&

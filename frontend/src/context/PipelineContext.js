@@ -12,8 +12,15 @@ import PropTypes from "prop-types";
 import { PIPELINE_STAGE_NAMES } from "components/EflShared/PipelineProgressBar";
 import { getPipelineStatus } from "services/endpoints";
 import { connectPipelineSocket, disconnectSocket } from "services/socket";
+import { humanizeSearchQuery } from "utils/humanizeSearchQuery";
 
 const MAX_FEED = 40;
+
+function formatSearchActivityMessage(query, resultCount) {
+  const label = humanizeSearchQuery(query);
+  const hits = resultCount ?? 0;
+  return `Search “${label}” (${hits} hits)`;
+}
 
 function emptyStages() {
   return PIPELINE_STAGE_NAMES.map((name) => ({
@@ -48,7 +55,7 @@ function feedItemFromWs(msg) {
       query: msg.query,
       result_count: msg.result_count,
       timestamp: ts,
-      message: `Search “${msg.query || ""}” (${msg.result_count ?? 0} hits)`,
+      message: formatSearchActivityMessage(msg.query, msg.result_count),
     };
   }
   if (msg.type === "duplicate_flag") {
@@ -76,20 +83,20 @@ function feedItemFromSummary(row) {
       message: `${row.stage} → ${row.status}`,
     };
   }
-  if (row.type === "search" || row.type === "search_event" || row.query) {
-    return {
-      type: "search_event",
-      query: row.query,
-      result_count: row.result_count,
-      timestamp: ts,
-      message: `Search “${row.query || ""}” (${row.result_count ?? 0} hits)`,
-    };
-  }
   if (row.type === "predict") {
     return {
       type: "predict",
       timestamp: ts,
       message: `Predict run (${row.result_count ?? 0} results)`,
+    };
+  }
+  if (row.type === "search" || row.type === "search_event") {
+    return {
+      type: "search_event",
+      query: row.query,
+      result_count: row.result_count,
+      timestamp: ts,
+      message: formatSearchActivityMessage(row.query, row.result_count),
     };
   }
   if (row.type === "duplicate" || row.type === "duplicate_flag") {
@@ -109,10 +116,24 @@ function feedItemFromSummary(row) {
   };
 }
 
+function normalizeFeedItem(item) {
+  if (!item || !item.timestamp) return null;
+  if (item.type === "search_event" || item.type === "search") {
+    return {
+      ...item,
+      type: "search_event",
+      message: formatSearchActivityMessage(item.query, item.result_count),
+    };
+  }
+  return item;
+}
+
 function mergeFeed(prev, incoming) {
   const map = new Map();
-  [...incoming, ...prev].forEach((item) => {
-    if (!item || !item.timestamp) return;
+  // Older first, then newer — so fresh humanized rows replace stale raw messages.
+  [...prev, ...incoming].forEach((raw) => {
+    const item = normalizeFeedItem(raw);
+    if (!item) return;
     map.set(activityId(item), item);
   });
   return Array.from(map.values())

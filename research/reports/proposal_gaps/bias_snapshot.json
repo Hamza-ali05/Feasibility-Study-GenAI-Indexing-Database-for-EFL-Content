@@ -1,0 +1,23 @@
+{
+  "n": 200,
+  "cefr": {
+    "B2": 40,
+    "A1": 40,
+    "C1": 34,
+    "C2": 30,
+    "A2": 28,
+    "B1": 28
+  },
+  "skill": {
+    "Listening": 121,
+    "Speaking": 40,
+    "Reading": 21,
+    "Grammar": 11,
+    "Writing": 5,
+    "Vocabulary": 2
+  },
+  "flags": [
+    "Dominant skill Listening is 60% of gold.",
+    "CEFR coverage on gold set: 100%."
+  ]
+}

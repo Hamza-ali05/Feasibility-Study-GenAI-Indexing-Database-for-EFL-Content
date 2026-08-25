@@ -15,6 +15,7 @@ from api.schemas import ResourceDetail, ResourceListResponse, ResourceOut
 from backend.auth.admin_auth import get_current_admin
 from backend.db.metadata_store import MetadataStore
 from backend.services import analytics_service, recommend_service, resource_admin
+from backend.services.taxonomy_labeler import enrich_resource_display
 from backend.utils.logger import get_logger
 
 logger = get_logger("efl_indexdb.api.resources")
@@ -54,20 +55,21 @@ def _title_of(row: dict) -> str:
     return (raw[:80] if raw else str(row.get("resource_id") or "Untitled"))
 
 def _to_resource_out(row: dict) -> ResourceOut:
-    preview = str(row.get("raw_text_preview") or "")
+    enriched = enrich_resource_display(row)
+    preview = str(enriched.get("raw_text_preview") or "")
     if not preview:
-        raw = _body_text(row)
+        raw = _body_text(enriched)
         preview = raw if len(raw) <= PREVIEW_CHARS else raw[: PREVIEW_CHARS - 1].rstrip() + "…"
     return ResourceOut(
-        resource_id=str(row["resource_id"]),
-        title=_title_of(row),
-        cefr_level=row.get("cefr_level"),
-        skill_type=row.get("skill_type"),
-        topic_domain=row.get("topic_domain"),
-        source_name=row.get("source_name"),
-        source_url=row.get("source_url"),
+        resource_id=str(enriched["resource_id"]),
+        title=_title_of(enriched),
+        cefr_level=enriched.get("cefr_level"),
+        skill_type=enriched.get("skill_type"),
+        topic_domain=enriched.get("topic_domain"),
+        source_name=enriched.get("source_name"),
+        source_url=enriched.get("source_url"),
         raw_text_preview=preview,
-        created_at=row.get("created_at"),
+        created_at=enriched.get("created_at"),
     )
 
 @router.get("", response_model=ResourceListResponse)
@@ -78,11 +80,16 @@ def list_resources(
     topic_domain: str | None = Query(None),
     source_name: str | None = Query(None),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(5, ge=1, le=100),
     sort: str = Query("title_asc"),
 ) -> ResourceListResponse:
     """Paginated real metadata rows for Browse + Admin tables."""
     store = MetadataStore()
+    try:
+        store.ensure_display_labels()
+    except Exception as exc:
+        logger.warning("ensure_display_labels failed: %s", exc)
+
     rows, total = store.list_paginated(
         filters={
             "cefr_level": cefr_level,

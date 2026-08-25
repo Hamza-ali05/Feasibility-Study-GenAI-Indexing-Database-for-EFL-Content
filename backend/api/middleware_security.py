@@ -23,7 +23,7 @@ _RATE_LIMITS: dict[str, tuple[int, int]] = {
     "/api/admin/login": (5, 60),
     "/api/search": (30, 60),
     "/api/qa/ask": (10, 60),
-    "/api/analyzer/upload": (5, 60),
+    "/api/analyzer/upload": (40, 60),
 }
 
 _lock = threading.Lock()

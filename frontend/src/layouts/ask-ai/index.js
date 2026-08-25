@@ -101,6 +101,87 @@ AssistantSources.defaultProps = {
   sources: [],
 };
 
+const WELCOME_EXAMPLES = [
+  "What A2 reading texts do we have about travel?",
+  "Suggest a short Business English activity for B1 learners.",
+  "How can I teach vocabulary about health using our library?",
+  "Summarise a beginner-friendly culture story I could use in class.",
+];
+
+function WelcomeGuide({ onPickExample, disabled }) {
+  return (
+    <MDBox display="flex" justifyContent="flex-start" mb={1.5}>
+      <MDBox
+        maxWidth={{ xs: "96%", md: "85%" }}
+        px={2}
+        py={1.75}
+        borderRadius="lg"
+        sx={{
+          backgroundColor: colors.white.main,
+          border: `1px solid ${colors.grey[300]}`,
+          backgroundImage: `linear-gradient(165deg, ${colors.grey[100]} 0%, #fff 60%)`,
+        }}
+      >
+        <MDTypography variant="button" fontWeight="bold" display="block" mb={0.75}>
+          Hi — I can help you explore your EFL library
+        </MDTypography>
+        <MDTypography variant="body2" color="text" sx={{ lineHeight: 1.6 }} mb={1.25}>
+          Ask me in plain English about lessons, texts, and teaching ideas already indexed here. I
+          pull answers from your resources and can point you to the sources I used.
+        </MDTypography>
+        <MDTypography variant="caption" fontWeight="medium" color="text" display="block" mb={1}>
+          Try something like:
+        </MDTypography>
+        <MDBox display="flex" flexDirection="column" gap={0.75}>
+          {WELCOME_EXAMPLES.map((example) => (
+            <MDBox
+              key={example}
+              component="button"
+              type="button"
+              disabled={disabled}
+              onClick={() => onPickExample(example)}
+              sx={{
+                textAlign: "left",
+                cursor: disabled ? "not-allowed" : "pointer",
+                border: `1px solid ${colors.grey[300]}`,
+                borderRadius: "0.6rem",
+                backgroundColor: "#fff",
+                px: 1.25,
+                py: 0.9,
+                opacity: disabled ? 0.55 : 1,
+                transition: "border-color 0.15s ease, background-color 0.15s ease",
+                "&:hover": disabled
+                  ? undefined
+                  : {
+                      borderColor: colors.info.main,
+                      backgroundColor: colors.grey[100],
+                    },
+              }}
+            >
+              <MDTypography variant="caption" color="text" sx={{ lineHeight: 1.45 }}>
+                “{example}”
+              </MDTypography>
+            </MDBox>
+          ))}
+        </MDBox>
+        <MDTypography variant="caption" color="text" display="block" mt={1.5}>
+          Tip: mention a CEFR level, skill (reading, speaking…), or topic when you can — it helps me
+          find a better match.
+        </MDTypography>
+      </MDBox>
+    </MDBox>
+  );
+}
+
+WelcomeGuide.propTypes = {
+  onPickExample: PropTypes.func.isRequired,
+  disabled: PropTypes.bool,
+};
+
+WelcomeGuide.defaultProps = {
+  disabled: false,
+};
+
 function AskAI() {
   const { stages, pipelineReady, hydrateFromStatus } = usePipeline();
   const [messages, setMessages] = useState([]);
@@ -264,13 +345,14 @@ function AskAI() {
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox py={3} display="flex" flexDirection="column" sx={{ minHeight: "70vh" }}>
-        <MDTypography variant="h4" fontWeight="bold" mb={0.5}>
-          Ask AI
-        </MDTypography>
-        <MDTypography variant="button" color="text" mb={2} display="block">
-          Question answering over your indexed EFL resources (RAG)
-        </MDTypography>
-
+        <MDBox mb={3} px={0.5}>
+          <MDTypography variant="h4" fontWeight="bold">
+            Ask AI
+          </MDTypography>
+          <MDTypography variant="button" color="text">
+            RAG-powered answers from your EFL resource library
+          </MDTypography>
+        </MDBox>
         {pipelineAlert && (
           <MDBox mb={2}>
             <MDAlert color="warning">
@@ -324,10 +406,12 @@ function AskAI() {
             sx={{ overflowY: "auto", maxHeight: "calc(70vh - 8rem)" }}
           >
             {messages.length === 0 && (
-              <MDTypography variant="button" color="text">
-                Ask a question about your indexed EFL content. Answers stream live from the RAG
-                service.
-              </MDTypography>
+              <WelcomeGuide
+                disabled={!predictComplete || streaming}
+                onPickExample={(example) => {
+                  setInput(example);
+                }}
+              />
             )}
 
             {messages.map((msg) => {

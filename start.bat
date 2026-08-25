@@ -105,8 +105,17 @@ if not exist "%ROOT%\.env" (
 )
 
 if not exist "%ROOT%\frontend\.env" (
-  >"%ROOT%\frontend\.env" echo REACT_APP_API_URL=http://localhost:8000
-  echo [OK] Created frontend\.env with REACT_APP_API_URL=http://localhost:8000
+  >"%ROOT%\frontend\.env" (
+    echo REACT_APP_API_URL=http://localhost:8000
+    echo BROWSER=none
+  )
+  echo [OK] Created frontend\.env ^(API URL + BROWSER=none^)
+) else (
+  findstr /I /C:"BROWSER=none" "%ROOT%\frontend\.env" >nul 2>&1
+  if errorlevel 1 (
+    >>"%ROOT%\frontend\.env" echo BROWSER=none
+    echo [OK] Added BROWSER=none to frontend\.env ^(CRA will not auto-open root^)
+  )
 )
 
 REM ---------- frontend deps ----------
@@ -160,9 +169,10 @@ start "EFL IndexDB - Backend (CMD 1)" cmd /k call "%ROOT%\scripts\run_backend.ba
 start "EFL IndexDB - Frontend (CMD 2)" cmd /k call "%ROOT%\scripts\run_frontend.bat"
 
 REM ---------- wait for servers, open sign-in ----------
+set "SIGNIN_URL=http://localhost:3000/authentication/sign-in"
 echo [5/5] Waiting for servers, then opening Sign In...
 echo       Backend  http://localhost:8000
-echo       Frontend http://localhost:3000/authentication/sign-in
+echo       Frontend !SIGNIN_URL!
 echo.
 
 set /a TRIES=0
@@ -186,32 +196,33 @@ powershell -NoProfile -Command "try { $r=Invoke-WebRequest -Uri 'http://localhos
 if errorlevel 1 (
   if !TRIES! GEQ 120 (
     echo [WARN] Frontend did not become ready in time. Check CMD 2.
-    echo       You can open http://localhost:3000/authentication/sign-in manually.
-    goto done
+    echo       Opening Sign In anyway — refresh if the page is blank.
+    goto open_browser
   )
   timeout /t 2 /nobreak >nul
   goto wait_frontend
 )
 echo [OK] Frontend is responding.
 
-REM Prefer Firefox for the sign-in page; fall back to default browser
-where firefox >nul 2>&1
-if not errorlevel 1 (
-  start "" firefox "http://localhost:3000/authentication/sign-in"
-) else if exist "%ProgramFiles%\Mozilla Firefox\firefox.exe" (
-  start "" "%ProgramFiles%\Mozilla Firefox\firefox.exe" "http://localhost:3000/authentication/sign-in"
-) else if exist "%ProgramFiles(x86)%\Mozilla Firefox\firefox.exe" (
-  start "" "%ProgramFiles(x86)%\Mozilla Firefox\firefox.exe" "http://localhost:3000/authentication/sign-in"
-) else (
-  echo [WARN] Firefox not found on PATH - opening default browser instead.
-  start "" "http://localhost:3000/authentication/sign-in"
+:open_browser
+echo.
+echo [OK] Opening browser to Sign In page:
+echo       !SIGNIN_URL!
+REM Default browser via PowerShell (most reliable on Windows double-click)
+powershell -NoProfile -Command "try { Start-Process '!SIGNIN_URL!'; exit 0 } catch { exit 1 }" >nul 2>&1
+if errorlevel 1 (
+  REM Fallback: cmd start protocol handler
+  start "" "!SIGNIN_URL!"
 )
 
 :done
 echo.
 echo ============================================================
-echo   Launch complete. Leave CMD 1 and CMD 2 open while using
-echo   the app. You can close this setup window after pressing a key.
+echo   Launch complete.
+echo   Backend : http://localhost:8000
+echo   Sign In : !SIGNIN_URL!
+echo   Leave CMD 1 and CMD 2 open while using the app.
+echo   You can close this setup window after pressing a key.
 echo ============================================================
 echo.
 pause

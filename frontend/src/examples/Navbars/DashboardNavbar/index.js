@@ -83,8 +83,6 @@ function DashboardNavbar({ absolute, light, isMini, hideBreadcrumbs }) {
       sx={{ mt: 2 }}
     >
       <NotificationItem icon={<Icon>email</Icon>} title="Check new messages" />
-      <NotificationItem icon={<Icon>podcasts</Icon>} title="Manage Podcast sessions" />
-      <NotificationItem icon={<Icon>shopping_cart</Icon>} title="Payment successfully completed" />
     </Menu>
   );
 
@@ -106,26 +104,35 @@ function DashboardNavbar({ absolute, light, isMini, hideBreadcrumbs }) {
       color="inherit"
       sx={(theme) => navbar(theme, { transparentNavbar, absolute, light, darkMode })}
     >
-      <Toolbar sx={(theme) => navbarContainer(theme)}>
+      <Toolbar
+        sx={[
+          (theme) => navbarContainer(theme),
+          hideBreadcrumbs && {
+            justifyContent: "flex-end",
+            alignItems: "center",
+            width: "100%",
+          },
+        ]}
+      >
         {!hideBreadcrumbs && (
           <MDBox color="inherit" mb={{ xs: 1, md: 0 }} sx={(theme) => navbarRow(theme, { isMini })}>
             <Breadcrumbs icon="home" title={route[route.length - 1]} route={route} light={light} />
           </MDBox>
         )}
         {isMini ? null : (
-          <MDBox sx={(theme) => navbarRow(theme, { isMini })}>
+          <MDBox
+            sx={[
+              (theme) => navbarRow(theme, { isMini }),
+              hideBreadcrumbs && { ml: "auto", justifyContent: "flex-end" },
+            ]}
+          >
             <MDBox pr={1}>
               <MDInput label="Search here" />
             </MDBox>
             <MDBox color={light ? "white" : "inherit"} display="flex" alignItems="center">
               {isAuthenticated ? (
                 <MDBox display="flex" alignItems="center" mr={1}>
-                  <MDButton
-                    variant="gradient"
-                    color="primary"
-                    size="small"
-                    onClick={handleLogout}
-                  >
+                  <MDButton variant="gradient" color="primary" size="small" onClick={handleLogout}>
                     Log out
                   </MDButton>
                 </MDBox>

@@ -7,11 +7,6 @@ import AccordionDetails from "@mui/material/AccordionDetails";
 import AccordionSummary from "@mui/material/AccordionSummary";
 import Card from "@mui/material/Card";
 import Skeleton from "@mui/material/Skeleton";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
 import MDBox from "components/MDBox";
@@ -43,26 +38,94 @@ function staticUrl(path) {
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+/** Column widths that keep Path/File-like first columns readable. */
+function columnWidths(columns) {
+  const n = columns.length || 1;
+  if (n === 1) return ["100%"];
+  if (n === 2) return ["70%", "30%"];
+  if (n === 3) return ["58%", "21%", "21%"];
+  if (n === 4) return ["46%", "14%", "20%", "20%"];
+  const rest = Math.floor(55 / (n - 1));
+  return [`${100 - rest * (n - 1)}%`, ...Array(n - 1).fill(`${rest}%`)];
+}
+
+/**
+ * Soft UI sets MuiTableHead to display:block for DataTable flex layouts,
+ * which breaks normal HTML tables. Use CSS grid so every pipeline stage
+ * keeps headers and cells in the same columns.
+ */
 function SimpleTable({ columns, rows }) {
+  const widths = columnWidths(columns);
+  const template = widths.join(" ");
+  const minWidth = Math.max(320, columns.length * 140);
+
   return (
-    <Table size="small">
-      <TableHead>
-        <TableRow>
+    <MDBox sx={{ width: "100%", overflowX: "auto" }}>
+      <MDBox
+        role="table"
+        sx={{
+          width: "100%",
+          minWidth,
+        }}
+      >
+        <MDBox
+          role="row"
+          sx={{
+            display: "grid",
+            gridTemplateColumns: template,
+            alignItems: "end",
+            borderBottom: `1px solid ${colors.grey[300]}`,
+          }}
+        >
           {columns.map((c) => (
-            <TableCell key={c}>{c}</TableCell>
+            <MDBox
+              key={c}
+              role="columnheader"
+              px={1.5}
+              py={1}
+              sx={{
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                color: colors.text?.main || "#7b809a",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {c}
+            </MDBox>
           ))}
-        </TableRow>
-      </TableHead>
-      <TableBody>
+        </MDBox>
+
         {rows.map((row, i) => (
-          <TableRow key={i}>
+          <MDBox
+            key={i}
+            role="row"
+            sx={{
+              display: "grid",
+              gridTemplateColumns: template,
+              alignItems: "start",
+              borderBottom: `1px solid ${colors.grey[200]}`,
+            }}
+          >
             {row.map((cell, j) => (
-              <TableCell key={j}>{cell}</TableCell>
+              <MDBox
+                key={j}
+                role="cell"
+                px={1.5}
+                py={1}
+                sx={{
+                  fontSize: "0.875rem",
+                  color: colors.dark?.main || "#344767",
+                  wordBreak: "break-word",
+                  overflowWrap: "anywhere",
+                }}
+              >
+                {cell}
+              </MDBox>
             ))}
-          </TableRow>
+          </MDBox>
         ))}
-      </TableBody>
-    </Table>
+      </MDBox>
+    </MDBox>
   );
 }
 

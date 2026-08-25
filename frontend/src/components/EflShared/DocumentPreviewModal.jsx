@@ -37,6 +37,14 @@ function paragraphsFromText(text) {
   return blocks.length ? blocks : ["(No text available)"];
 }
 
+function blurAppFocus() {
+  const app = document.getElementById("app");
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && (!app || app.contains(active))) {
+    active.blur();
+  }
+}
+
 function DocumentPreviewModal({ resourceId, open, onClose }) {
   const [activeId, setActiveId] = useState(resourceId);
   const [detail, setDetail] = useState(null);
@@ -52,6 +60,11 @@ function DocumentPreviewModal({ resourceId, open, onClose }) {
       setError(null);
     }
   }, [open, resourceId]);
+
+  // Avoid aria-hidden warning: do not leave focus on the Preview button under #app.
+  useEffect(() => {
+    if (open) blurAppFocus();
+  }, [open]);
 
   useEffect(() => {
     if (!open || !activeId) {
@@ -89,13 +102,23 @@ function DocumentPreviewModal({ resourceId, open, onClose }) {
     detail?.raw_text_full || detail?.raw_text_preview || ""
   );
 
+  const handleClose = (event, reason) => {
+    blurAppFocus();
+    onClose(event, reason);
+  };
+
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       fullWidth
       maxWidth="lg"
       scroll="paper"
+      disableRestoreFocus
+      TransitionProps={{
+        onEnter: blurAppFocus,
+        onExited: blurAppFocus,
+      }}
       PaperProps={{
         sx: { minHeight: { md: "70vh" } },
       }}
@@ -106,7 +129,8 @@ function DocumentPreviewModal({ resourceId, open, onClose }) {
         </MDTypography>
         <IconButton
           aria-label="close"
-          onClick={onClose}
+          onClick={handleClose}
+          autoFocus
           sx={{ position: "absolute", right: 8, top: 8 }}
         >
           <CloseIcon />

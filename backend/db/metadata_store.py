@@ -445,6 +445,148 @@ class MetadataStore:
                 out[col] = {str(r["value"]): int(r["n"]) for r in rows}
         return out
 
+    def backfill_taxonomy_labels(self, *, batch_size: int = 500) -> dict[str, int]:
+        """Fill null skill_type / topic_domain using heuristic taxonomy labeler.
+
+        Idempotent: only updates rows missing skill and/or topic. Returns counts.
+        """
+        from backend.services.taxonomy_labeler import enrich_taxonomy
+
+        updated = 0
+        scanned = 0
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT resource_id, title, cefr_level, skill_type, topic_domain,
+                       source_name, raw_text_preview, raw_text_full
+                FROM resources
+                WHERE skill_type IS NULL OR TRIM(CAST(skill_type AS TEXT)) = ''
+                   OR topic_domain IS NULL OR TRIM(CAST(topic_domain AS TEXT)) = ''
+                """
+            ).fetchall()
+
+            pending: list[tuple[str | None, str | None, str]] = []
+            for row in rows:
+                scanned += 1
+                meta = _row_to_dict(row)
+                enriched = enrich_taxonomy(meta)
+                skill = enriched.get("skill_type")
+                topic = enriched.get("topic_domain")
+                if skill == meta.get("skill_type") and topic == meta.get("topic_domain"):
+                    continue
+                pending.append((skill, topic, str(meta["resource_id"])))
+                if len(pending) >= batch_size:
+                    conn.executemany(
+                        """
+                        UPDATE resources
+                        SET skill_type = COALESCE(skill_type, ?),
+                            topic_domain = COALESCE(topic_domain, ?)
+                        WHERE resource_id = ?
+                        """,
+                        pending,
+                    )
+                    updated += len(pending)
+                    pending.clear()
+
+            if pending:
+                conn.executemany(
+                    """
+                    UPDATE resources
+                    SET skill_type = COALESCE(skill_type, ?),
+                        topic_domain = COALESCE(topic_domain, ?)
+                    WHERE resource_id = ?
+                    """,
+                    pending,
+                )
+                updated += len(pending)
+            conn.commit()
+
+        logger.info(
+            "taxonomy backfill scanned=%s updated=%s",
+            scanned,
+            updated,
+        )
+        return {"scanned": scanned, "updated": updated}
+
+    def ensure_taxonomy_labels(self) -> dict[str, int]:
+        """Backfill once when skill/topic facets are empty."""
+        facets = self.facets()
+        if facets.get("skill_type") and facets.get("topic_domain"):
+            return {"scanned": 0, "updated": 0, "skipped": 1}
+        return self.backfill_taxonomy_labels()
+
+    def backfill_source_names(self, *, batch_size: int = 500) -> dict[str, int]:
+        """Fill null source_name using URL host or stable corpus labels."""
+        from backend.services.taxonomy_labeler import infer_source_name
+
+        updated = 0
+        scanned = 0
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT resource_id, title, source_name, source_url
+                FROM resources
+                WHERE source_name IS NULL OR TRIM(CAST(source_name AS TEXT)) = ''
+                """
+            ).fetchall()
+
+            pending: list[tuple[str, str]] = []
+            for row in rows:
+                scanned += 1
+                meta = _row_to_dict(row)
+                # Persist the short canonical key (not display label) when possible.
+                inferred = infer_source_name(meta)
+                pending.append((inferred, str(meta["resource_id"])))
+                if len(pending) >= batch_size:
+                    conn.executemany(
+                        """
+                        UPDATE resources
+                        SET source_name = COALESCE(source_name, ?)
+                        WHERE resource_id = ?
+                        """,
+                        pending,
+                    )
+                    updated += len(pending)
+                    pending.clear()
+
+            if pending:
+                conn.executemany(
+                    """
+                    UPDATE resources
+                    SET source_name = COALESCE(source_name, ?)
+                    WHERE resource_id = ?
+                    """,
+                    pending,
+                )
+                updated += len(pending)
+            conn.commit()
+
+        logger.info("source backfill scanned=%s updated=%s", scanned, updated)
+        return {"scanned": scanned, "updated": updated}
+
+    def ensure_display_labels(self) -> dict[str, int]:
+        """Ensure skill/topic/source are populated for browse tables."""
+        tax = self.ensure_taxonomy_labels()
+        with self._connect() as conn:
+            null_sources = int(
+                conn.execute(
+                    """
+                    SELECT COUNT(*) AS n FROM resources
+                    WHERE source_name IS NULL OR TRIM(CAST(source_name AS TEXT)) = ''
+                    """
+                ).fetchone()["n"]
+                or 0
+            )
+        src = (
+            self.backfill_source_names()
+            if null_sources > 0
+            else {"scanned": 0, "updated": 0}
+        )
+        return {
+            "taxonomy_updated": int(tax.get("updated") or 0),
+            "source_updated": int(src.get("updated") or 0),
+        }
+
     def get_one(self, resource_id: str) -> dict[str, Any] | None:
         return self.get_by_id(resource_id)
 

@@ -48,6 +48,29 @@ def _get_state() -> dict[str, Any]:
         return dict(_audit_state)
 
 
+def _empty_report() -> dict[str, Any]:
+    """Placeholder payload when no audit has been run yet."""
+    return {
+        "available": False,
+        "audit_date": None,
+        "target": None,
+        "summary": {
+            "total_tests": 0,
+            "passed": 0,
+            "failed": 0,
+            "warnings": 0,
+        },
+        "authentication": [],
+        "input_validation": [],
+        "prompt_injection": [],
+        "file_upload": [],
+        "api_security": [],
+        "owasp_mapping": [],
+        "recommendations": [],
+        "message": "No security audit report yet. Run a security audit to generate results.",
+    }
+
+
 def _load_audit_json() -> dict[str, Any]:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     # Prefer canonical name; fall back to legacy raw file
@@ -56,16 +79,12 @@ def _load_audit_json() -> dict[str, Any]:
             try:
                 data = json.loads(path.read_text(encoding="utf-8-sig"))
                 if isinstance(data, dict):
+                    data = dict(data)
+                    data.setdefault("available", True)
                     return data
             except (OSError, json.JSONDecodeError) as exc:
                 logger.warning("Failed reading %s: %s", path, exc)
-    raise HTTPException(
-        status_code=404,
-        detail=(
-            "No security audit report found. "
-            "Run POST /api/security/run-audit first."
-        ),
-    )
+    return _empty_report()
 
 
 def _run_audit_job() -> None:

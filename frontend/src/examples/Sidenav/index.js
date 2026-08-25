@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useLocation, NavLink } from "react-router-dom";
 
@@ -12,7 +12,6 @@ import MuiCollapse from "@mui/material/Collapse";
 
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
-import MDButton from "components/MDButton";
 
 import SidenavCollapse from "examples/Sidenav/SidenavCollapse";
 
@@ -28,43 +27,73 @@ import {
 
 function pathMatches(pathname, route) {
   if (!route) return false;
-
   const base = route.split("/:")[0];
   return pathname === route || pathname === base || pathname.startsWith(`${base}/`);
 }
 
+function routeIsActive(pathname, routeItem) {
+  if (!routeItem) return false;
+  if (routeItem.route && pathMatches(pathname, routeItem.route)) return true;
+  if (Array.isArray(routeItem.collapse)) {
+    return routeItem.collapse.some((c) => pathMatches(pathname, c.route));
+  }
+  return false;
+}
+
+/** Split flat routes into title sections for expand/collapse groups. */
+function buildSections(routes) {
+  const sections = [];
+  let current = { key: "section-top", title: null, icon: null, items: [] };
+
+  routes.forEach((route) => {
+    if (route.type === "hidden") return;
+    if (route.type === "title") {
+      if (current.items.length || current.title) {
+        sections.push(current);
+      }
+      current = {
+        key: route.key,
+        title: route.title,
+        icon: route.icon || null,
+        items: [],
+      };
+      return;
+    }
+    current.items.push(route);
+  });
+
+  if (current.items.length || current.title) {
+    sections.push(current);
+  }
+  return sections;
+}
+
 function Sidenav({ color, brand, brandName, routes, ...rest }) {
   const [controller, dispatch] = useMaterialUIController();
-  const { miniSidenav, transparentSidenav, whiteSidenav, darkMode, sidenavColor } = controller;
+  const { miniSidenav, transparentSidenav, whiteSidenav, darkMode } = controller;
   const location = useLocation();
   const { pathname } = location;
 
+  const sections = useMemo(() => buildSections(routes), [routes]);
+
+  const [openSections, setOpenSections] = useState({});
   const [openNested, setOpenNested] = useState({});
 
-  let textColor = "white";
-
-  if (transparentSidenav || (whiteSidenav && !darkMode)) {
-    textColor = "dark";
-  } else if (whiteSidenav && darkMode) {
-    textColor = "inherit";
-  }
+  // Brand / logo text: white on dark sidebar, dark on light sidebar
+  const darkSidenav = !whiteSidenav && !(transparentSidenav && !darkMode);
+  const textColor = darkSidenav ? "white" : "dark";
 
   const closeSidenav = () => setMiniSidenav(dispatch, true);
 
-  const toggleNested = (key) => {
-    setOpenNested((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
+  const toggleSection = useCallback((sectionKey) => {
+    setOpenSections((prev) => ({ ...prev, [sectionKey]: !prev[sectionKey] }));
+  }, []);
 
-  useEffect(() => {
-    routes.forEach((r) => {
-      if (r.type === "collapse" && Array.isArray(r.collapse)) {
-        const childActive = r.collapse.some((c) => pathMatches(pathname, c.route));
-        if (childActive) {
-          setOpenNested((prev) => (prev[r.key] ? prev : { ...prev, [r.key]: true }));
-        }
-      }
-    });
-  }, [pathname, routes]);
+  const toggleNested = useCallback((key) => {
+    setOpenNested((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+
+  // Menus stay closed until the user opens them (no auto-expand on route change)
 
   useEffect(() => {
     function handleMiniSidenav() {
@@ -76,111 +105,149 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
     window.addEventListener("resize", handleMiniSidenav);
     handleMiniSidenav();
     return () => window.removeEventListener("resize", handleMiniSidenav);
-  }, [dispatch, location]);
+  }, [dispatch, location, transparentSidenav, whiteSidenav]);
 
-  const renderRoutes = routes.map(
-    ({ type, name, icon, title, noCollapse, key, href, route, collapse }) => {
-      let returnValue;
+  const renderMenuItem = (routeItem) => {
+    const { type, name, icon, noCollapse, key, href, route, collapse } = routeItem;
 
-      if (type === "collapse") {
-        if (Array.isArray(collapse) && collapse.length > 0) {
-          const isOpen = Boolean(openNested[key]);
-          const childActive = collapse.some((c) => pathMatches(pathname, c.route));
+    if (type === "divider") {
+      return (
+        <Divider
+          key={key}
+          light={
+            (!darkMode && !whiteSidenav && !transparentSidenav) ||
+            (darkMode && !transparentSidenav && whiteSidenav)
+          }
+        />
+      );
+    }
 
-          returnValue = (
-            <MDBox key={key}>
-              <MDBox onClick={() => toggleNested(key)} sx={{ cursor: "pointer" }}>
-                <SidenavCollapse
-                  name={name}
-                  icon={icon}
-                  active={childActive}
-                  open={isOpen}
-                  collapsible
-                />
-              </MDBox>
-              <MuiCollapse in={isOpen} timeout="auto" unmountOnExit>
-                <List
-                  component="div"
-                  disablePadding
-                  sx={{
-                    pl: miniSidenav ? 0 : 1.5,
-                    "& .MuiListItem-root .MuiBox-root": {
-                      marginLeft: miniSidenav ? undefined : "1.5rem",
-                      marginRight: "1rem",
-                    },
+    if (type !== "collapse") return null;
+
+    // Parent with submenus — click toggles all children open/closed
+    if (Array.isArray(collapse) && collapse.length > 0) {
+      const isOpen = Boolean(openNested[key]);
+      const childActive = collapse.some((c) => pathMatches(pathname, c.route));
+
+      return (
+        <MDBox key={key}>
+          <SidenavCollapse
+            name={name}
+            icon={icon}
+            active={childActive}
+            open={isOpen}
+            collapsible
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              toggleNested(key);
+            }}
+          />
+          <MuiCollapse in={isOpen} timeout="auto" unmountOnExit>
+            <List
+              component="div"
+              disablePadding
+              sx={{
+                pl: miniSidenav ? 0 : 1.5,
+                "& .MuiListItem-root .MuiBox-root": {
+                  marginLeft: miniSidenav ? undefined : "1.5rem",
+                  marginRight: "1rem",
+                },
+              }}
+            >
+              {collapse.map((child) => (
+                <NavLink
+                  key={child.key}
+                  to={child.route}
+                  onClick={() => {
+                    if (window.innerWidth < 1200) closeSidenav();
                   }}
                 >
-                  {collapse.map((child) => (
-                    <NavLink key={child.key} to={child.route}>
-                      <SidenavCollapse
-                        name={child.name}
-                        icon={child.icon}
-                        active={pathMatches(pathname, child.route)}
-                      />
-                    </NavLink>
-                  ))}
-                </List>
-              </MuiCollapse>
-            </MDBox>
-          );
-        } else if (href) {
-          returnValue = (
-            <Link
-              href={href}
-              key={key}
-              target="_blank"
-              rel="noreferrer"
-              sx={{ textDecoration: "none" }}
-            >
-              <SidenavCollapse
-                name={name}
-                icon={icon}
-                active={pathMatches(pathname, route)}
-                noCollapse={noCollapse}
-              />
-            </Link>
-          );
-        } else {
-          returnValue = (
-            <NavLink key={key} to={route}>
-              <SidenavCollapse name={name} icon={icon} active={pathMatches(pathname, route)} />
-            </NavLink>
-          );
-        }
-      } else if (type === "title") {
-        returnValue = (
-          <MDTypography
-            key={key}
-            color={textColor}
-            display="block"
-            variant="caption"
-            fontWeight="bold"
-            textTransform="uppercase"
-            pl={3}
-            mt={2}
-            mb={1}
-            ml={1}
-          >
-            {title}
-          </MDTypography>
-        );
-      } else if (type === "divider") {
-        returnValue = (
-          <Divider
-            key={key}
-            light={
-              (!darkMode && !whiteSidenav && !transparentSidenav) ||
-              (darkMode && !transparentSidenav && whiteSidenav)
-            }
-          />
-        );
-      } else {
-        returnValue = null;
-      }
-
-      return returnValue;
+                  <SidenavCollapse
+                    name={child.name}
+                    icon={child.icon}
+                    active={pathMatches(pathname, child.route)}
+                  />
+                </NavLink>
+              ))}
+            </List>
+          </MuiCollapse>
+        </MDBox>
+      );
     }
-  );
+
+    if (href) {
+      return (
+        <Link
+          href={href}
+          key={key}
+          target="_blank"
+          rel="noreferrer"
+          sx={{ textDecoration: "none" }}
+        >
+          <SidenavCollapse
+            name={name}
+            icon={icon}
+            active={pathMatches(pathname, route)}
+            noCollapse={noCollapse}
+          />
+        </Link>
+      );
+    }
+
+    return (
+      <NavLink
+        key={key}
+        to={route}
+        onClick={() => {
+          if (window.innerWidth < 1200) closeSidenav();
+        }}
+      >
+        <SidenavCollapse name={name} icon={icon} active={pathMatches(pathname, route)} />
+      </NavLink>
+    );
+  };
+
+  const renderSections = sections.map((section) => {
+    // Titled menus start closed; only open after the user clicks
+    const isSectionOpen = section.title ? Boolean(openSections[section.key]) : true;
+    const sectionActive = section.items.some((item) => routeIsActive(pathname, item));
+
+    return (
+      <MDBox key={section.key} mb={0.5}>
+        {section.title && (
+          <SidenavCollapse
+            name={section.title}
+            icon={section.icon || <Icon fontSize="small">folder</Icon>}
+            active={sectionActive}
+            open={isSectionOpen}
+            collapsible
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              toggleSection(section.key);
+            }}
+          />
+        )}
+
+        <MuiCollapse in={isSectionOpen} timeout="auto" unmountOnExit>
+          <List
+            component="div"
+            disablePadding
+            sx={
+              section.title
+                ? {
+                    pl: miniSidenav ? 0 : 1,
+                  }
+                : undefined
+            }
+          >
+            {section.items.map((item) => renderMenuItem(item))}
+          </List>
+        </MuiCollapse>
+      </MDBox>
+    );
+  });
 
   return (
     <SidenavRoot
@@ -202,7 +269,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
             <Icon sx={{ fontWeight: "bold" }}>close</Icon>
           </MDTypography>
         </MDBox>
-        <MDBox component={NavLink} to="/" display="flex" alignItems="center">
+        <MDBox component={NavLink} to="/dashboard" display="flex" alignItems="center">
           {brand && <MDBox component="img" src={brand} alt="Brand" width="2rem" />}
           <MDBox
             width={!brandName && "100%"}
@@ -220,20 +287,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
           (darkMode && !transparentSidenav && whiteSidenav)
         }
       />
-      <List>{renderRoutes}</List>
-      <MDBox p={2} mt="auto">
-        <MDButton
-          component="a"
-          href="https://www.creative-tim.com/product/material-dashboard-pro-react"
-          target="_blank"
-          rel="noreferrer"
-          variant="gradient"
-          color={sidenavColor}
-          fullWidth
-        >
-          upgrade to pro
-        </MDButton>
-      </MDBox>
+      <List sx={{ overflowY: "auto", flex: 1 }}>{renderSections}</List>
     </SidenavRoot>
   );
 }

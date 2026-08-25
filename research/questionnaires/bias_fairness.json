@@ -1,0 +1,32 @@
+{
+  "questionnaire_id": "bias",
+  "title": "Pedagogical bias and fairness probe",
+  "description": "Short ratings used alongside interviews to capture perceived bias in retrieval (CEFR, skill, variety of English).",
+  "questions": [
+    {
+      "id": "bias_01",
+      "text": "Search results matched the CEFR level I asked for.",
+      "type": "likert_5"
+    },
+    {
+      "id": "bias_02",
+      "text": "Reading resources were over-represented compared with listening/speaking.",
+      "type": "likert_5"
+    },
+    {
+      "id": "bias_03",
+      "text": "Materials seemed biased toward Inner-Circle (UK/US) cultural topics.",
+      "type": "likert_5"
+    },
+    {
+      "id": "bias_04",
+      "text": "I would trust this index to recommend homework for mixed-level classes.",
+      "type": "likert_5"
+    },
+    {
+      "id": "bias_05",
+      "text": "Ask AI answers stayed within the retrieved teaching materials.",
+      "type": "likert_5"
+    }
+  ]
+}

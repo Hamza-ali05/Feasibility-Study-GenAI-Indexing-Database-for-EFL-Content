@@ -63,14 +63,28 @@ import QueryStatsIcon from "@mui/icons-material/QueryStats";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import GroupsIcon from "@mui/icons-material/Groups";
+import PeopleIcon from "@mui/icons-material/People";
 import DescriptionIcon from "@mui/icons-material/Description";
 import SecurityIcon from "@mui/icons-material/Security";
 import ImageIcon from "@mui/icons-material/Image";
-import LoginIcon from "@mui/icons-material/Login";
 import InfoIcon from "@mui/icons-material/Info";
-import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
-
-const nestIcon = <FiberManualRecordIcon sx={{ fontSize: "0.55rem !important" }} />;
+import TravelExploreIcon from "@mui/icons-material/TravelExplore";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import MergeTypeIcon from "@mui/icons-material/MergeType";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import CleaningServicesIcon from "@mui/icons-material/CleaningServices";
+import CallSplitIcon from "@mui/icons-material/CallSplit";
+import TuneIcon from "@mui/icons-material/Tune";
+import BalanceIcon from "@mui/icons-material/Balance";
+import ModelTrainingIcon from "@mui/icons-material/ModelTraining";
+import FactCheckIcon from "@mui/icons-material/FactCheck";
+import PublicIcon from "@mui/icons-material/Public";
+import PlaceIcon from "@mui/icons-material/Place";
+import VerifiedIcon from "@mui/icons-material/Verified";
+import BoltIcon from "@mui/icons-material/Bolt";
+import WorkspacesIcon from "@mui/icons-material/Workspaces";
+import InsightsIcon from "@mui/icons-material/Insights";
+import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
 
 const routes = [
   {
@@ -82,7 +96,12 @@ const routes = [
     component: <Dashboard />,
   },
 
-  { type: "title", title: "EFL Workspace", key: "title-efl-workspace" },
+  {
+    type: "title",
+    title: "EFL Workspace",
+    key: "title-efl-workspace",
+    icon: <WorkspacesIcon fontSize="small" />,
+  },
 
   {
     type: "collapse",
@@ -125,116 +144,12 @@ const routes = [
     component: <Analyzer />,
   },
 
-  { type: "title", title: "Pipeline", key: "title-pipeline" },
-
   {
-    type: "collapse",
-    name: "Pipeline Monitor",
-    key: "pipeline-monitor",
-    icon: <AccountTreeIcon fontSize="small" />,
-    collapse: [
-      {
-        name: "Discover",
-        key: "pipeline-discover",
-        icon: nestIcon,
-        route: "/pipeline/discover",
-        component: <DiscoverStage />,
-      },
-      {
-        name: "Load",
-        key: "pipeline-load",
-        icon: nestIcon,
-        route: "/pipeline/load",
-        component: <LoadStage />,
-      },
-      {
-        name: "Integrate",
-        key: "pipeline-integrate",
-        icon: nestIcon,
-        route: "/pipeline/integrate",
-        component: <IntegrateStage />,
-      },
-      {
-        name: "EDA",
-        key: "pipeline-eda",
-        icon: nestIcon,
-        route: "/pipeline/eda",
-        component: <EDAStage />,
-      },
-      {
-        name: "Clean",
-        key: "pipeline-clean",
-        icon: nestIcon,
-        route: "/pipeline/clean",
-        component: <CleanStage />,
-      },
-      {
-        name: "Split",
-        key: "pipeline-split",
-        icon: nestIcon,
-        route: "/pipeline/split",
-        component: <SplitStage />,
-      },
-      {
-        name: "Preprocess",
-        key: "pipeline-preprocess",
-        icon: nestIcon,
-        route: "/pipeline/preprocess",
-        component: <PreprocessStage />,
-      },
-      {
-        name: "Balance",
-        key: "pipeline-balance",
-        icon: nestIcon,
-        route: "/pipeline/balance",
-        component: <BalanceStage />,
-      },
-      {
-        name: "Train",
-        key: "pipeline-train",
-        icon: nestIcon,
-        route: "/pipeline/train",
-        component: <TrainStage />,
-      },
-      {
-        name: "Evaluate",
-        key: "pipeline-evaluate",
-        icon: nestIcon,
-        route: "/pipeline/evaluate",
-        component: <EvaluateStage />,
-      },
-      {
-        name: "Explain Global",
-        key: "pipeline-explain-global",
-        icon: nestIcon,
-        route: "/pipeline/explain-global",
-        component: <ExplainGlobalStage />,
-      },
-      {
-        name: "Explain Local",
-        key: "pipeline-explain-local",
-        icon: nestIcon,
-        route: "/pipeline/explain-local",
-        component: <ExplainLocalStage />,
-      },
-      {
-        name: "Explain Quality",
-        key: "pipeline-explain-quality",
-        icon: nestIcon,
-        route: "/pipeline/explain-quality",
-        component: <ExplainQualityStage />,
-      },
-      {
-        name: "Predict",
-        key: "pipeline-predict",
-        icon: nestIcon,
-        route: "/pipeline/predict",
-        component: <PredictStage />,
-      },
-    ],
+    type: "title",
+    title: "Insights",
+    key: "title-insights",
+    icon: <InsightsIcon fontSize="small" />,
   },
-
-  { type: "title", title: "Insights", key: "title-insights" },
 
   {
     type: "collapse",
@@ -269,81 +184,73 @@ const routes = [
     component: <Duplicates />,
   },
 
-  { type: "title", title: "Admin", key: "title-admin" },
+  {
+    type: "title",
+    title: "Admin Panel",
+    key: "title-admin",
+    icon: <AdminPanelSettingsIcon fontSize="small" />,
+  },
 
   {
     type: "collapse",
-    name: "Admin Panel",
-    key: "admin-panel",
+    name: "Overview",
+    key: "admin-overview",
     icon: <AdminPanelSettingsIcon fontSize="small" />,
-    collapse: [
-      {
-        name: "Overview",
-        key: "admin-overview",
-        icon: nestIcon,
-        route: "/admin/overview",
-        component: (
-          <RequireAuth>
-            <AdminOverview />
-          </RequireAuth>
-        ),
-      },
-      {
-        name: "Manage Resources",
-        key: "admin-resources",
-        icon: nestIcon,
-        route: "/admin/resources",
-        component: (
-          <RequireAuth>
-            <AdminManageResources />
-          </RequireAuth>
-        ),
-      },
-      {
-        name: "Logs",
-        key: "admin-logs",
-        icon: nestIcon,
-        route: "/admin/logs",
-        component: (
-          <RequireAuth>
-            <AdminLogs />
-          </RequireAuth>
-        ),
-      },
-    ],
+    route: "/admin/overview",
+    component: (
+      <RequireAuth>
+        <AdminOverview />
+      </RequireAuth>
+    ),
   },
-
+  {
+    type: "collapse",
+    name: "Manage Resources",
+    key: "admin-resources",
+    icon: <LibraryBooksIcon fontSize="small" />,
+    route: "/admin/resources",
+    component: (
+      <RequireAuth>
+        <AdminManageResources />
+      </RequireAuth>
+    ),
+  },
+  {
+    type: "collapse",
+    name: "Logs",
+    key: "admin-logs",
+    icon: <DescriptionIcon fontSize="small" />,
+    route: "/admin/logs",
+    component: (
+      <RequireAuth>
+        <AdminLogs />
+      </RequireAuth>
+    ),
+  },
   {
     type: "collapse",
     name: "Practitioner Evaluation",
-    key: "practitioner-evaluation",
+    key: "practitioner-overview",
     icon: <GroupsIcon fontSize="small" />,
-    collapse: [
-      {
-        name: "Overview",
-        key: "practitioner-overview",
-        icon: nestIcon,
-        route: "/practitioner/overview",
-        component: (
-          <RequireAuth>
-            <PractitionerOverview />
-          </RequireAuth>
-        ),
-      },
-      {
-        name: "Manage Participants",
-        key: "practitioner-manage",
-        icon: nestIcon,
-        route: "/practitioner/manage",
-        component: (
-          <RequireAuth>
-            <PractitionerManage />
-          </RequireAuth>
-        ),
-      },
-    ],
+    route: "/practitioner/overview",
+    component: (
+      <RequireAuth>
+        <PractitionerOverview />
+      </RequireAuth>
+    ),
   },
-
+  {
+    type: "collapse",
+    name: "Manage Participants",
+    key: "practitioner-manage",
+    icon: <PeopleIcon fontSize="small" />,
+    route: "/practitioner/manage",
+    component: (
+      <RequireAuth>
+        <PractitionerManage />
+      </RequireAuth>
+    ),
+  },
   {
     type: "collapse",
     name: "Report Generator",
@@ -370,8 +277,8 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Dissertation Figures",
-    key: "dissertation-figures",
+    name: "Project figures",
+    key: "project-figures",
     icon: <ImageIcon fontSize="small" />,
     route: "/figures",
     component: (
@@ -381,13 +288,137 @@ const routes = [
     ),
   },
 
-  { type: "title", title: "Account", key: "title-account" },
+  {
+    type: "title",
+    title: "Pipeline",
+    key: "title-pipeline",
+    icon: <AccountTreeIcon fontSize="small" />,
+  },
 
   {
     type: "collapse",
+    name: "Discover",
+    key: "pipeline-discover",
+    icon: <TravelExploreIcon fontSize="small" />,
+    route: "/pipeline/discover",
+    component: <DiscoverStage />,
+  },
+  {
+    type: "collapse",
+    name: "Load",
+    key: "pipeline-load",
+    icon: <CloudUploadIcon fontSize="small" />,
+    route: "/pipeline/load",
+    component: <LoadStage />,
+  },
+  {
+    type: "collapse",
+    name: "Integrate",
+    key: "pipeline-integrate",
+    icon: <MergeTypeIcon fontSize="small" />,
+    route: "/pipeline/integrate",
+    component: <IntegrateStage />,
+  },
+  {
+    type: "collapse",
+    name: "EDA",
+    key: "pipeline-eda",
+    icon: <BarChartIcon fontSize="small" />,
+    route: "/pipeline/eda",
+    component: <EDAStage />,
+  },
+  {
+    type: "collapse",
+    name: "Clean",
+    key: "pipeline-clean",
+    icon: <CleaningServicesIcon fontSize="small" />,
+    route: "/pipeline/clean",
+    component: <CleanStage />,
+  },
+  {
+    type: "collapse",
+    name: "Split",
+    key: "pipeline-split",
+    icon: <CallSplitIcon fontSize="small" />,
+    route: "/pipeline/split",
+    component: <SplitStage />,
+  },
+  {
+    type: "collapse",
+    name: "Preprocess",
+    key: "pipeline-preprocess",
+    icon: <TuneIcon fontSize="small" />,
+    route: "/pipeline/preprocess",
+    component: <PreprocessStage />,
+  },
+  {
+    type: "collapse",
+    name: "Balance",
+    key: "pipeline-balance",
+    icon: <BalanceIcon fontSize="small" />,
+    route: "/pipeline/balance",
+    component: <BalanceStage />,
+  },
+  {
+    type: "collapse",
+    name: "Train",
+    key: "pipeline-train",
+    icon: <ModelTrainingIcon fontSize="small" />,
+    route: "/pipeline/train",
+    component: <TrainStage />,
+  },
+  {
+    type: "collapse",
+    name: "Evaluate",
+    key: "pipeline-evaluate",
+    icon: <FactCheckIcon fontSize="small" />,
+    route: "/pipeline/evaluate",
+    component: <EvaluateStage />,
+  },
+  {
+    type: "collapse",
+    name: "Explain Global",
+    key: "pipeline-explain-global",
+    icon: <PublicIcon fontSize="small" />,
+    route: "/pipeline/explain-global",
+    component: <ExplainGlobalStage />,
+  },
+  {
+    type: "collapse",
+    name: "Explain Local",
+    key: "pipeline-explain-local",
+    icon: <PlaceIcon fontSize="small" />,
+    route: "/pipeline/explain-local",
+    component: <ExplainLocalStage />,
+  },
+  {
+    type: "collapse",
+    name: "Explain Quality",
+    key: "pipeline-explain-quality",
+    icon: <VerifiedIcon fontSize="small" />,
+    route: "/pipeline/explain-quality",
+    component: <ExplainQualityStage />,
+  },
+  {
+    type: "collapse",
+    name: "Predict",
+    key: "pipeline-predict",
+    icon: <BoltIcon fontSize="small" />,
+    route: "/pipeline/predict",
+    component: <PredictStage />,
+  },
+
+  {
+    type: "title",
+    title: "Account",
+    key: "title-account",
+    icon: <ManageAccountsIcon fontSize="small" />,
+  },
+
+  {
+    type: "hidden",
     name: "Sign In",
     key: "sign-in",
-    icon: <LoginIcon fontSize="small" />,
     route: "/authentication/sign-in",
     component: <SignIn />,
   },

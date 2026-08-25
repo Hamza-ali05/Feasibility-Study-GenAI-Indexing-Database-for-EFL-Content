@@ -4,13 +4,16 @@ Metrics / evaluation API router (+ experiment tracking endpoints).
 
 from __future__ import annotations
 
+import io
 import json
 import threading
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from api.schemas import MetricsResponse
@@ -212,8 +215,8 @@ def run_experiment(
 
 
 @experiments_router.post("/export-comparison")
-def export_experiment_comparison(body: ExperimentCompareBody) -> dict[str, Any]:
-    """Export selected experiments as CSV / LaTeX / PNG comparison tables."""
+def export_experiment_comparison(body: ExperimentCompareBody) -> StreamingResponse:
+    """Export selected experiments as CSV / LaTeX / PNG and download as a ZIP."""
     et = ExperimentTracker()
     ids = [i.strip() for i in body.experiment_ids if i and str(i).strip()]
     if len(ids) < 1:
@@ -234,11 +237,24 @@ def export_experiment_comparison(body: ExperimentCompareBody) -> dict[str, Any]:
             detail=f"Comparison export failed: {exc}",
         ) from exc
 
-    return {
-        "files_generated": len(files),
-        "output_dir": "research/reports/experiments",
-        "files": [_rel_export_path(f) for f in files],
-    }
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for file_path in files:
+            path = Path(file_path)
+            if not path.is_file():
+                continue
+            zf.write(path, arcname=path.name)
+    if buf.tell() == 0:
+        raise HTTPException(status_code=500, detail="Export produced no downloadable files.")
+    buf.seek(0)
+
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    filename = f"experiment_comparison_{stamp}.zip"
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @experiments_router.get("/{experiment_id}")

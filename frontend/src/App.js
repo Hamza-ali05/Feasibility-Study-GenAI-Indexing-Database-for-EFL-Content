@@ -39,6 +39,7 @@ import createCache from "@emotion/cache";
 import routes from "routes";
 
 import { useMaterialUIController, setMiniSidenav, setOpenConfigurator } from "context";
+import { installAriaHiddenFocusFix } from "utils/ariaHiddenFocusFix";
 
 import brandWhite from "assets/images/logo-ct.png";
 import brandDark from "assets/images/logo-ct-dark.png";
@@ -68,6 +69,8 @@ export default function App() {
     setRtlCache(cacheRtl);
   }, []);
 
+  useEffect(() => installAriaHiddenFocusFix("app"), []);
+
   const handleOnMouseEnter = () => {
     if (miniSidenav && !onMouseEnter) {
       setMiniSidenav(dispatch, false);
@@ -82,7 +85,11 @@ export default function App() {
     }
   };
 
-  const handleConfiguratorOpen = () => setOpenConfigurator(dispatch, !openConfigurator);
+  const handleConfiguratorOpen = () => {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement) active.blur();
+    setOpenConfigurator(dispatch, !openConfigurator);
+  };
 
   useEffect(() => {
     document.body.setAttribute("dir", direction);
@@ -150,8 +157,9 @@ export default function App() {
         )}
         {layout === "vr" && <Configurator />}
         <Routes>
+          <Route path="/" element={<Navigate to="/authentication/sign-in" replace />} />
           {getRoutes(routes)}
-          <Route path="*" element={<Navigate to="/authentication/sign-in" />} />
+          <Route path="*" element={<Navigate to="/authentication/sign-in" replace />} />
         </Routes>
       </ThemeProvider>
     </CacheProvider>
@@ -174,8 +182,9 @@ export default function App() {
       )}
       {layout === "vr" && <Configurator />}
       <Routes>
+        <Route path="/" element={<Navigate to="/authentication/sign-in" replace />} />
         {getRoutes(routes)}
-        <Route path="*" element={<Navigate to="/authentication/sign-in" />} />
+        <Route path="*" element={<Navigate to="/authentication/sign-in" replace />} />
       </Routes>
     </ThemeProvider>
   );

@@ -1,0 +1,82 @@
+{
+  "cycle": 2,
+  "design_change": "Persist SBERT skill/topic labels; gold filters use transformer labels not hashes",
+  "gold_n": 200,
+  "filter_coverage": [
+    {
+      "filter": "skill",
+      "value": "Grammar",
+      "n": 11
+    },
+    {
+      "filter": "skill",
+      "value": "Listening",
+      "n": 121
+    },
+    {
+      "filter": "skill",
+      "value": "Reading",
+      "n": 21
+    },
+    {
+      "filter": "skill",
+      "value": "Speaking",
+      "n": 40
+    },
+    {
+      "filter": "skill",
+      "value": "Vocabulary",
+      "n": 2
+    },
+    {
+      "filter": "skill",
+      "value": "Writing",
+      "n": 5
+    },
+    {
+      "filter": "topic",
+      "value": "Academic",
+      "n": 4
+    },
+    {
+      "filter": "topic",
+      "value": "Business",
+      "n": 42
+    },
+    {
+      "filter": "topic",
+      "value": "Culture",
+      "n": 53
+    },
+    {
+      "filter": "topic",
+      "value": "Daily Life",
+      "n": 59
+    },
+    {
+      "filter": "topic",
+      "value": "Health",
+      "n": 14
+    },
+    {
+      "filter": "topic",
+      "value": "Science",
+      "n": 8
+    },
+    {
+      "filter": "topic",
+      "value": "Technology",
+      "n": 2
+    },
+    {
+      "filter": "topic",
+      "value": "Travel",
+      "n": 18
+    },
+    {
+      "filter": "cefr_non_null",
+      "n": 200
+    }
+  ],
+  "evaluated_at": "2026-08-24T08:50:46.546441+00:00"
+}

@@ -1,6 +1,0 @@
-{
-  "tombstoned_ids": [
-    "drop-me"
-  ],
-  "note": "IndexFlatIP cannot remove vectors in-place; these ids are filtered out of FAISSVectorStore.search() results."
-}

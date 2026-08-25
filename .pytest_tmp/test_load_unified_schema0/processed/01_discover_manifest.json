@@ -1,1 +1,0 @@
-{"stage": "Discover", "run_at": "2026-01-01T00:00:00+00:00", "files": [{"path": "demo.csv", "ext": ".csv", "size_bytes": 100, "rows_estimate": 3, "encoding": "utf-8"}]}

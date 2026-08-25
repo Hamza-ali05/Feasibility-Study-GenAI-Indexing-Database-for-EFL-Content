@@ -191,6 +191,8 @@ class InterviewManager:
     def get_all(self) -> list[Participant]:
         return list(self._participants.values())
 
+    get_all = get_all
+
     def get_by_status(self, status: ParticipantStatus | str) -> list[Participant]:
         return [p for p in self._participants.values() if p.status == status]
 
@@ -271,3 +273,12 @@ class InterviewManager:
                         p.institution_type,
                     ]
                 )
+
+    # API / coder aliases
+    get_all = get_all
+    add_participant = add_participant
+    update_status = update_status
+    withdraw_participant = withdraw_participant
+    recruitment_summary = recruitment_summary
+    get_interview = get_interview
+    link_interview = link_interview
