@@ -285,8 +285,8 @@ function CleanArtifact({ enabled }) {
 
 function SplitArtifact({ enabled }) {
   const { data, loading, error } = useArtifact("split", enabled);
-  const dist = data?.cefr_distribution_per_split || {};
   const chart = useMemo(() => {
+    const dist = data?.cefr_distribution_per_split || {};
     const labels = CEFR_ORDER;
     return {
       labels,
@@ -308,7 +308,7 @@ function SplitArtifact({ enabled }) {
         },
       ],
     };
-  }, [dist]);
+  }, [data?.cefr_distribution_per_split]);
 
   return (
     <ArtifactShell loading={loading} error={error}>

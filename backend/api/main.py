@@ -106,10 +106,25 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     )
 
 
+def _cors_origins() -> list[str]:
+    """Allow both localhost and 127.0.0.1 for the configured frontend origin.
+
+    Browsers treat these as different origins; Soft UI / CRA tabs often use one
+    while CORS_ORIGIN defaults to the other, which makes OPTIONS return 400.
+    """
+    primary = (Config.CORS_ORIGIN or "http://localhost:3000").rstrip("/")
+    origins = {primary}
+    if "://localhost" in primary:
+        origins.add(primary.replace("://localhost", "://127.0.0.1", 1))
+    if "://127.0.0.1" in primary:
+        origins.add(primary.replace("://127.0.0.1", "://localhost", 1))
+    return sorted(origins)
+
+
 # Middleware is applied in reverse order of addition (last added = outermost).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[Config.CORS_ORIGIN],
+    allow_origins=_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -160,14 +175,36 @@ def health() -> dict:
 
 @app.api_route("/login", methods=["GET", "POST"])
 def login_placeholder() -> dict:
-    """
-    Silence Material Dashboard template hits to /login until Admin auth (later).
-    Returns 200 JSON instead of a noisy 404 in the uvicorn log.
-    """
+    """Silence Soft UI / Material Dashboard template hits to /login."""
     return {
-        "status": "auth_not_configured",
-        "detail": "Admin auth is not wired yet. Use the API endpoints directly.",
+        "status": "use_admin_login",
+        "detail": "Use POST /api/admin/login (or /api/login) with username and password.",
     }
+
+
+@app.post("/api/login")
+def api_login_alias(body: dict):
+    """Alias for Soft UI template clients that POST /api/login instead of /api/admin/login."""
+    from fastapi import HTTPException, status
+
+    from api.routers.admin import LoginBody, login as admin_login
+
+    username = str(body.get("username") or body.get("email") or "").strip()
+    password = str(body.get("password") or "")
+    if not username or not password:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="username (or email) and password are required",
+        )
+    return admin_login(LoginBody(username=username, password=password))
+
+
+@app.get("/api/contacts")
+@app.get("/api/users")
+@app.get("/api/contact-tags")
+def soft_ui_crm_stub() -> list:
+    """Empty stubs for Creative Tim Soft UI CRM demo calls (not part of EFL IndexDB)."""
+    return []
 
 
 @app.get("/.well-known/appspecific/com.chrome.devtools.json")
