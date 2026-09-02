@@ -46,7 +46,6 @@ import PractitionerManage from "layouts/practitioner/manage";
 import ReportGenerator from "layouts/report";
 import SecurityEvaluation from "layouts/security";
 import FiguresPage from "layouts/figures";
-import About from "layouts/about";
 import RecommendationsPage from "layouts/recommendations";
 
 import RequireAuth from "components/EflShared/RequireAuth";
@@ -67,7 +66,6 @@ import PeopleIcon from "@mui/icons-material/People";
 import DescriptionIcon from "@mui/icons-material/Description";
 import SecurityIcon from "@mui/icons-material/Security";
 import ImageIcon from "@mui/icons-material/Image";
-import InfoIcon from "@mui/icons-material/Info";
 import TravelExploreIcon from "@mui/icons-material/TravelExplore";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import MergeTypeIcon from "@mui/icons-material/MergeType";
@@ -84,7 +82,6 @@ import VerifiedIcon from "@mui/icons-material/Verified";
 import BoltIcon from "@mui/icons-material/Bolt";
 import WorkspacesIcon from "@mui/icons-material/Workspaces";
 import InsightsIcon from "@mui/icons-material/Insights";
-import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
 
 const routes = [
   {
@@ -409,26 +406,11 @@ const routes = [
   },
 
   {
-    type: "title",
-    title: "Account",
-    key: "title-account",
-    icon: <ManageAccountsIcon fontSize="small" />,
-  },
-
-  {
     type: "hidden",
     name: "Sign In",
     key: "sign-in",
     route: "/authentication/sign-in",
     component: <SignIn />,
-  },
-  {
-    type: "collapse",
-    name: "About",
-    key: "about",
-    icon: <InfoIcon fontSize="small" />,
-    route: "/about",
-    component: <About />,
   },
 ];
 

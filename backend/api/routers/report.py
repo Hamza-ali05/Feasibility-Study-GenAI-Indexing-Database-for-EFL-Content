@@ -188,7 +188,7 @@ def _readiness() -> list[dict[str, Any]]:
             "id": "security",
             "label": "Security audit run?",
             "ready": SECURITY_REPORT.exists(),
-            "link": "/about",
+            "link": "/security",
         },
     ]
 
