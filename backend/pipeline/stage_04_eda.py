@@ -24,6 +24,8 @@ logger = get_logger("efl_indexdb.pipeline.eda")
 
 STAGE_NAME = "EDA"
 INPUT_PATH = DATA_PROCESSED / "03_integrated.parquet"
+LABELLED_PATH = DATA_PROCESSED / "03_integrated_labelled.parquet"
+TAXONOMY_LABELS_PATH = DATA_PROCESSED / "taxonomy_transformer_labels.parquet"
 REPORT_PATH = DATA_PROCESSED / "04_eda_report.json"
 PLOTS_DIR = DATA_PROCESSED / "eda_plots"
 
@@ -65,7 +67,68 @@ def _style_axes(ax: plt.Axes) -> None:
 
 def _distribution(series: pd.Series, ordered: list[str]) -> dict[str, int]:
     counts = series.dropna().astype(str).value_counts()
-    return {key: int(counts.get(key, 0)) for key in ordered}
+    dist = {key: int(counts.get(key, 0)) for key in ordered}
+    for key, value in counts.items():
+        if key not in dist:
+            dist[str(key)] = int(value)
+    return dist
+
+
+def _column_is_empty(df: pd.DataFrame, column: str) -> bool:
+    if column not in df.columns:
+        return True
+    series = df[column]
+    if series.isna().all():
+        return True
+    return series.astype(str).str.strip().isin(["", "None", "nan", "NaN"]).all()
+
+
+def _attach_taxonomy_labels(df: pd.DataFrame) -> pd.DataFrame:
+    """Fill null skill/topic columns from the transformer label table when present."""
+    skill_empty = _column_is_empty(df, "skill_type")
+    topic_empty = _column_is_empty(df, "topic_domain")
+    if not (skill_empty or topic_empty) or not TAXONOMY_LABELS_PATH.exists():
+        return df
+
+    labels = pd.read_parquet(TAXONOMY_LABELS_PATH)
+    keep = [c for c in ("resource_id", "skill_type", "topic_domain") if c in labels.columns]
+    if "resource_id" not in keep:
+        return df
+
+    merged = df.merge(labels[keep], on="resource_id", how="left", suffixes=("", "_tax"))
+    if skill_empty and "skill_type_tax" in merged.columns:
+        merged["skill_type"] = merged["skill_type"].where(
+            merged["skill_type"].notna() & (merged["skill_type"].astype(str).str.strip() != ""),
+            merged["skill_type_tax"],
+        )
+        merged = merged.drop(columns=["skill_type_tax"])
+    elif "skill_type_tax" in merged.columns:
+        merged = merged.drop(columns=["skill_type_tax"])
+    if topic_empty and "topic_domain_tax" in merged.columns:
+        merged["topic_domain"] = merged["topic_domain"].where(
+            merged["topic_domain"].notna() & (merged["topic_domain"].astype(str).str.strip() != ""),
+            merged["topic_domain_tax"],
+        )
+        merged = merged.drop(columns=["topic_domain_tax"])
+    elif "topic_domain_tax" in merged.columns:
+        merged = merged.drop(columns=["topic_domain_tax"])
+    logger.info("merged taxonomy labels from %s", TAXONOMY_LABELS_PATH)
+    return merged
+
+
+def _load_input() -> pd.DataFrame:
+    if LABELLED_PATH.exists():
+        df = pd.read_parquet(LABELLED_PATH)
+        logger.info("loaded %s labelled rows from %s", len(df), LABELLED_PATH)
+        return df
+    if not INPUT_PATH.exists():
+        raise RuntimeError(
+            f"Missing {INPUT_PATH}. Run Integrate first: "
+            "python -m backend.pipeline.stage_03_integrate"
+        )
+    df = pd.read_parquet(INPUT_PATH)
+    logger.info("loaded %s rows from %s", len(df), INPUT_PATH)
+    return _attach_taxonomy_labels(df)
 
 def _text_length_stats(series: pd.Series) -> dict[str, float]:
     lengths = series.fillna("").astype(str).str.len()
@@ -139,6 +202,7 @@ def _plot_topic_bar(dist: dict[str, int], path: Path) -> None:
     ax.set_xlabel("Topic")
     ax.set_ylabel("Count")
     ax.tick_params(axis="x", rotation=30)
+    ax.set_ylim(bottom=0, top=max(values + [1]) * 1.12)
     _style_axes(ax)
     fig.tight_layout()
     fig.savefig(path, dpi=120, facecolor=BG_PAGE)
@@ -190,21 +254,13 @@ def print_summary(report: dict) -> None:
     print("top_sources:")
     for item in report["top_sources"]:
         print(f"  - {item['source_name']}: {item['count']}")
-    print(f"plots → {PLOTS_DIR}")
+    print(f"plots -> {PLOTS_DIR}")
     print("=================================\n")
 
 def run() -> dict:
     pipeline_state.mark_running(STAGE_NAME)
     try:
-        if not INPUT_PATH.exists():
-            raise RuntimeError(
-                f"Missing {INPUT_PATH}. Run Integrate first: "
-                "python -m backend.pipeline.stage_03_integrate"
-            )
-
-        df = pd.read_parquet(INPUT_PATH)
-        logger.info("loaded %s rows from %s", len(df), INPUT_PATH)
-
+        df = _load_input()
         report = build_report(df)
         PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -225,10 +281,13 @@ def run() -> dict:
         with REPORT_PATH.open("w", encoding="utf-8") as fh:
             json.dump(report, fh, indent=2)
             fh.write("\n")
-        logger.info("wrote EDA report → %s", REPORT_PATH)
+        logger.info("wrote EDA report to %s", REPORT_PATH)
 
-        print_summary(report)
         pipeline_state.mark_complete(STAGE_NAME)
+        try:
+            print_summary(report)
+        except UnicodeEncodeError:
+            logger.warning("could not print EDA summary with this console encoding")
         return report
     except Exception:
         pipeline_state.mark_failed(STAGE_NAME)

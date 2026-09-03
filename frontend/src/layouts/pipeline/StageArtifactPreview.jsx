@@ -16,7 +16,9 @@ import MDButton from "components/MDButton";
 import MDInput from "components/MDInput";
 
 import VerticalBarChart from "examples/Charts/BarCharts/VerticalBarChart";
+import PieChart from "examples/Charts/PieChart";
 import { MetricCard, CefrBadge, SimilarityBar } from "components/EflShared";
+import { SKILL_TYPES, TOPIC_DOMAINS } from "assets/theme/base/eflLabels";
 
 import { API_URL } from "services/apiClient";
 import {
@@ -31,11 +33,14 @@ import colors from "assets/theme/base/colors";
 
 const CEFR_ORDER = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
-function staticUrl(path) {
+function staticUrl(path, cacheKey) {
   if (!path) return "";
   if (path.startsWith("http")) return path;
   const base = (API_URL || "http://localhost:8000").replace(/\/$/, "");
-  return `${base}${path.startsWith("/") ? path : `/${path}`}`;
+  const url = `${base}${path.startsWith("/") ? path : `/${path}`}`;
+  if (!cacheKey) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}v=${encodeURIComponent(cacheKey)}`;
 }
 
 /** Column widths that keep Path/File-like first columns readable. */
@@ -246,23 +251,93 @@ function IntegrateArtifact({ enabled }) {
 function EdaArtifact({ enabled }) {
   const { data, loading, error } = useArtifact("eda", enabled);
   const plots = data?.plot_urls || {};
+  const cacheKey = data?.run_at || "";
+
+  const cefrChart = useMemo(() => {
+    const dist = data?.cefr_distribution || {};
+    return {
+      labels: CEFR_ORDER,
+      datasets: [
+        {
+          label: "Resources",
+          color: "primary",
+          data: CEFR_ORDER.map((l) => Number(dist[l] || 0)),
+        },
+      ],
+    };
+  }, [data?.cefr_distribution]);
+
+  const skillChart = useMemo(() => {
+    const dist = data?.skill_distribution || {};
+    const labels = SKILL_TYPES.filter((l) => Number(dist[l] || 0) > 0);
+    const palette = ["info", "primary", "success", "warning", "error", "secondary"];
+    return {
+      labels,
+      datasets: {
+        label: "Skill types",
+        backgroundColors: labels.map((_, i) => palette[i % palette.length]),
+        data: labels.map((l) => Number(dist[l] || 0)),
+      },
+    };
+  }, [data?.skill_distribution]);
+
+  const topicChart = useMemo(() => {
+    const dist = data?.topic_distribution || {};
+    return {
+      labels: TOPIC_DOMAINS,
+      datasets: [
+        {
+          label: "Resources",
+          color: "primary",
+          data: TOPIC_DOMAINS.map((l) => Number(dist[l] || 0)),
+        },
+      ],
+    };
+  }, [data?.topic_distribution]);
+
+  const skillTotal = (skillChart.datasets?.data || []).reduce((sum, n) => sum + Number(n || 0), 0);
+  const topicTotal = (topicChart.datasets?.[0]?.data || []).reduce(
+    (sum, n) => sum + Number(n || 0),
+    0
+  );
+
   return (
     <ArtifactShell loading={loading} error={error}>
+      <MDTypography variant="button" mb={1.5} display="block">
+        Total resources: {data?.total_resources ?? "—"}
+      </MDTypography>
       <MDBox display="grid" gap={2} sx={{ gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" } }}>
-        {Object.entries(plots).map(([key, url]) => (
-          <Card key={key} sx={{ p: 1 }}>
+        <VerticalBarChart title="CEFR distribution" height="16rem" chart={cefrChart} />
+        {skillTotal > 0 ? (
+          <PieChart title="Skill types" height="16rem" chart={skillChart} />
+        ) : (
+          <Card sx={{ p: 2 }}>
+            <MDTypography variant="h6">Skill types</MDTypography>
+            <MDTypography variant="button" color="text">
+              No skill_type values in the EDA report yet.
+            </MDTypography>
+          </Card>
+        )}
+        <VerticalBarChart title="Topic domains" height="16rem" chart={topicChart} />
+        {plots.text_length_hist ? (
+          <Card sx={{ p: 1 }}>
             <MDTypography variant="caption" color="text" mb={0.5} display="block">
-              {key}
+              Text length
             </MDTypography>
             <MDBox
               component="img"
-              src={staticUrl(url)}
-              alt={key}
+              src={staticUrl(plots.text_length_hist, cacheKey)}
+              alt="Text length"
               sx={{ width: "100%", height: "auto", borderRadius: 1 }}
             />
           </Card>
-        ))}
+        ) : null}
       </MDBox>
+      {topicTotal === 0 && (
+        <MDTypography variant="caption" color="text" mt={1} display="block">
+          Topic domain counts are zero — re-run EDA after skill/topic labels are attached.
+        </MDTypography>
+      )}
     </ArtifactShell>
   );
 }

@@ -41,10 +41,7 @@ const SECTION_OPTIONS = [
 function markdownToHtml(md) {
   if (!md) return "";
   const escape = (s) =>
-    String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+    String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
   const lines = String(md).replace(/\r\n/g, "\n").split("\n");
   const html = [];
@@ -219,10 +216,7 @@ function ReportGenerator() {
   const [previewHtml, setPreviewHtml] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
 
-  const allSelected = useMemo(
-    () => SECTION_OPTIONS.every((o) => selected[o.key]),
-    [selected]
-  );
+  const allSelected = useMemo(() => SECTION_OPTIONS.every((o) => selected[o.key]), [selected]);
 
   const refresh = useCallback(async () => {
     setLoadingList(true);
@@ -380,12 +374,7 @@ function ReportGenerator() {
             ))}
           </FormGroup>
           <MDBox mt={2} display="flex" gap={1} flexWrap="wrap">
-            <MDButton
-              variant="gradient"
-              color="primary"
-              onClick={handleGenerate}
-              disabled={busy}
-            >
+            <MDButton variant="gradient" color="primary" onClick={handleGenerate} disabled={busy}>
               {busy ? "Working…" : "Generate Selected"}
             </MDButton>
             <MDButton
@@ -452,7 +441,9 @@ function ReportGenerator() {
                   variant="text"
                   color="dark"
                   component="a"
-                  href={`${API_URL}${sec.download_url || `/static/research-reports/draft_chapters/${sec.filename}`}`}
+                  href={`${API_URL}${
+                    sec.download_url || `/static/research-reports/draft_chapters/${sec.filename}`
+                  }`}
                   target="_blank"
                   rel="noopener noreferrer"
                 >

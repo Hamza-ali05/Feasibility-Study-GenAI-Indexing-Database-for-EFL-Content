@@ -282,12 +282,12 @@
     "balance_ratio_threshold": 3.0
   },
   "runtime": {
-    "pipeline_total_seconds": 2013.862,
+    "pipeline_total_seconds": 2069.216,
     "per_stage_seconds": {
       "Discover": 2.485,
       "Load": 9.894,
       "Integrate": 9.592,
-      "EDA": 3.262,
+      "EDA": 58.616,
       "Clean": 15.485,
       "Split": 2.164,
       "Preprocess": 1639.114,

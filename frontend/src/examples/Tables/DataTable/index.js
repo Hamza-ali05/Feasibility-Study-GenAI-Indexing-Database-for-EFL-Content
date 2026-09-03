@@ -143,7 +143,7 @@ function DataTable({
                   setEntriesPerPage(parseInt(newValue, 10));
                 }}
                 size="small"
-                sx={{ width: "5rem" }}
+                sx={{ width: "8rem" }}
                 renderInput={(params) => <MDInput {...params} />}
               />
               <MDTypography variant="caption" color="secondary">

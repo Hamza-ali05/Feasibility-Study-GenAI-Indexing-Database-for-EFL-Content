@@ -494,7 +494,7 @@ function Analyzer() {
                     Classifier could not determine skill / topic — set them manually
                   </MDTypography>
                   <MDBox display="flex" flexWrap="wrap" gap={2} mb={1.5}>
-                    <FormControl size="small" sx={{ minWidth: 160 }}>
+                    <FormControl size="small" sx={{ minWidth: 280, flex: "1 1 280px" }}>
                       <InputLabel id="manual-skill">Skill type</InputLabel>
                       <Select
                         labelId="manual-skill"
@@ -512,7 +512,7 @@ function Analyzer() {
                         ))}
                       </Select>
                     </FormControl>
-                    <FormControl size="small" sx={{ minWidth: 160 }}>
+                    <FormControl size="small" sx={{ minWidth: 280, flex: "1 1 280px" }}>
                       <InputLabel id="manual-topic">Topic domain</InputLabel>
                       <Select
                         labelId="manual-topic"

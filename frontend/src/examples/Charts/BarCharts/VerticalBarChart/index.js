@@ -41,21 +41,29 @@ import colors from "assets/theme/base/colors";
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 function VerticalBarChart({ icon, title, description, height, chart }) {
-  const chartDatasets = chart.datasets
-    ? chart.datasets.map((dataset) => ({
-        ...dataset,
-        weight: 5,
-        borderWidth: 0,
-        borderRadius: 4,
-        backgroundColor: colors[dataset.color]
-          ? colors[dataset.color || "dark"].main
-          : colors.dark.main,
-        fill: false,
-        maxBarThickness: 35,
-      }))
-    : [];
+  const chartNode = useMemo(() => {
+    const chartDatasets = chart.datasets
+      ? chart.datasets.map((dataset) => ({
+          ...dataset,
+          weight: 5,
+          borderWidth: 0,
+          borderRadius: 4,
+          backgroundColor: colors[dataset.color]
+            ? colors[dataset.color || "dark"].main
+            : colors.dark.main,
+          fill: false,
+          maxBarThickness: 35,
+        }))
+      : [];
 
-  const { data, options } = configs(chart.labels || [], chartDatasets);
+    const { data, options } = configs(chart.labels || [], chartDatasets);
+
+    return (
+      <MDBox height={height}>
+        <Bar data={data} options={options} redraw />
+      </MDBox>
+    );
+  }, [chart, height]);
 
   const renderChart = (
     <MDBox py={2} pr={2} pl={icon.component ? 1 : 2}>
@@ -89,14 +97,7 @@ function VerticalBarChart({ icon, title, description, height, chart }) {
           </MDBox>
         </MDBox>
       ) : null}
-      {useMemo(
-        () => (
-          <MDBox height={height}>
-            <Bar data={data} options={options} redraw />
-          </MDBox>
-        ),
-        [chart, height]
-      )}
+      {chartNode}
     </MDBox>
   );
 

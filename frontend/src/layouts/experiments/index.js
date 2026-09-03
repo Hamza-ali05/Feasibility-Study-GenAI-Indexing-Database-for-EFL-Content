@@ -696,13 +696,16 @@ function Experiments() {
                 MenuProps: { disableScrollLock: true },
               }}
               sx={{
+                minWidth: 260,
                 "& .MuiOutlinedInput-root": {
                   minHeight: "2.8125rem",
                 },
                 "& .MuiSelect-select": {
                   display: "flex",
                   alignItems: "center",
+                  minHeight: "2.75rem",
                   py: 1.5,
+                  px: 2,
                 },
               }}
             >

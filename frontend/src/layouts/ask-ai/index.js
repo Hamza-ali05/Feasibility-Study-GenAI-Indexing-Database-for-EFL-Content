@@ -3,10 +3,6 @@ import { Link as RouterLink } from "react-router-dom";
 import PropTypes from "prop-types";
 
 import Card from "@mui/material/Card";
-import Collapse from "@mui/material/Collapse";
-import IconButton from "@mui/material/IconButton";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
@@ -30,58 +26,112 @@ function isAnthropicConfigError(detail) {
   return /ANTHROPIC_API_KEY/i.test(text) || /anthropic api authentication/i.test(text);
 }
 
+function dash(value) {
+  const text = String(value || "").trim();
+  return text || "—";
+}
+
+function cleanSourceTitle(title) {
+  let text = String(title || "");
+  text = text.replace(/https?:\/\/\S+/gi, " ");
+  text = text.replace(/www\.\S+/gi, " ");
+  text = text.replace(/\bgutenberg\b/gi, " ");
+  text = text.replace(/["“”]/g, " ");
+  text = text.replace(/\s+/g, " ").trim();
+  if (text.length > 90) {
+    text = `${text.slice(0, 87)}…`;
+  }
+  return text || "Untitled resource";
+}
+
 function AssistantSources({ sources, onOpenSource }) {
-  const [open, setOpen] = useState(false);
   if (!sources || sources.length === 0) return null;
 
+  const columns = ["#", "Title", "CEFR", "Skill", "Topic"];
+  const template = "48px minmax(140px, 1.6fr) 64px 100px 110px";
+
   return (
-    <MDBox mt={1.25}>
-      <MDBox
-        display="flex"
-        alignItems="center"
-        sx={{ cursor: "pointer" }}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <MDTypography variant="caption" fontWeight="bold" color="text">
-          Sources ({sources.length})
-        </MDTypography>
-        <IconButton size="small" aria-label={open ? "Hide sources" : "Show sources"}>
-          {open ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-        </IconButton>
-      </MDBox>
-      <Collapse in={open}>
-        <MDBox component="ul" m={0} mt={0.5} pl={0} sx={{ listStyle: "none" }}>
-          {sources.map((src) => {
+    <MDBox mt={1.5}>
+      <MDTypography variant="caption" fontWeight="bold" color="text" display="block" mb={0.75}>
+        Sources ({sources.length})
+      </MDTypography>
+      <MDBox sx={{ width: "100%", overflowX: "auto" }}>
+        <MDBox role="table" sx={{ width: "100%", minWidth: 420 }}>
+          <MDBox
+            role="row"
+            sx={{
+              display: "grid",
+              gridTemplateColumns: template,
+              alignItems: "end",
+              borderBottom: `1px solid ${colors.grey[300]}`,
+            }}
+          >
+            {columns.map((c) => (
+              <MDBox
+                key={c}
+                role="columnheader"
+                px={1}
+                py={0.75}
+                sx={{
+                  fontSize: "0.7rem",
+                  fontWeight: 700,
+                  color: colors.text.focus,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {c}
+              </MDBox>
+            ))}
+          </MDBox>
+          {sources.map((src, index) => {
             const cefrOk =
               src.cefr_level && ["A1", "A2", "B1", "B2", "C1", "C2"].includes(src.cefr_level);
+            const cells = [
+              String(index + 1),
+              dash(cleanSourceTitle(src.title)),
+              cefrOk ? src.cefr_level : "—",
+              dash(src.skill_type),
+              dash(src.topic_domain),
+            ];
             return (
               <MDBox
-                component="li"
-                key={src.resource_id}
-                display="flex"
-                alignItems="center"
-                gap={1}
-                py={0.5}
+                key={src.resource_id || index}
+                role="row"
+                onClick={() => src.resource_id && onOpenSource(src.resource_id)}
                 sx={{
-                  cursor: "pointer",
-                  "&:hover .src-title": { textDecoration: "underline" },
+                  display: "grid",
+                  gridTemplateColumns: template,
+                  alignItems: "start",
+                  borderBottom: `1px solid ${colors.grey[200]}`,
+                  cursor: src.resource_id ? "pointer" : "default",
+                  "&:hover": src.resource_id ? { backgroundColor: colors.grey[100] } : undefined,
                 }}
-                onClick={() => onOpenSource(src.resource_id)}
               >
-                <MDTypography
-                  className="src-title"
-                  variant="caption"
-                  fontWeight="medium"
-                  sx={{ color: colors.primary.main }}
-                >
-                  {src.title}
-                </MDTypography>
-                {cefrOk && <CefrBadge level={src.cefr_level} />}
+                {cells.map((cell, j) => (
+                  <MDBox
+                    key={`${src.resource_id || index}-${j}`}
+                    role="cell"
+                    px={1}
+                    py={0.85}
+                    sx={{
+                      fontSize: "0.78rem",
+                      fontWeight: j === 1 ? 600 : 400,
+                      color: j === 1 ? colors.primary.main : colors.dark.main,
+                      wordBreak: "break-word",
+                      overflowWrap: "anywhere",
+                    }}
+                  >
+                    {j === 2 && cefrOk ? <CefrBadge level={src.cefr_level} /> : cell}
+                  </MDBox>
+                ))}
               </MDBox>
             );
           })}
         </MDBox>
-      </Collapse>
+      </MDBox>
+      <MDTypography variant="caption" color="text" display="block" mt={0.75}>
+        Click a row to preview the full resource.
+      </MDTypography>
     </MDBox>
   );
 }
@@ -92,6 +142,8 @@ AssistantSources.propTypes = {
       resource_id: PropTypes.string,
       title: PropTypes.string,
       cefr_level: PropTypes.string,
+      skill_type: PropTypes.string,
+      topic_domain: PropTypes.string,
     })
   ),
   onOpenSource: PropTypes.func.isRequired,
@@ -424,7 +476,7 @@ function AskAI() {
                   mb={1.5}
                 >
                   <MDBox
-                    maxWidth={{ xs: "92%", md: "75%" }}
+                    maxWidth={{ xs: "96%", md: !isUser && msg.sources ? "94%" : "75%" }}
                     px={1.75}
                     py={1.25}
                     borderRadius="lg"
@@ -449,7 +501,7 @@ function AskAI() {
                     >
                       {msg.text || (msg.streaming ? "…" : "")}
                     </MDTypography>
-                    {!isUser && !msg.streaming && msg.sources && (
+                    {!isUser && msg.sources && (
                       <AssistantSources sources={msg.sources} onOpenSource={setPreviewId} />
                     )}
                   </MDBox>

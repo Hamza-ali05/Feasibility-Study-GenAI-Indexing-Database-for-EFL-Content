@@ -194,17 +194,21 @@ const STAGE_FIGURES = {
   ],
 };
 
-function figureUrl(path) {
+function figureUrl(path, cacheKey) {
   if (!path) return "";
   if (path.startsWith("http")) return path;
   const base = (API_URL || "http://localhost:8000").replace(/\/$/, "");
-  return `${base}${path.startsWith("/") ? path : `/${path}`}`;
+  const url = `${base}${path.startsWith("/") ? path : `/${path}`}`;
+  if (!cacheKey) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}v=${encodeURIComponent(cacheKey)}`;
 }
 
 function StageFiguresCard({ stageName }) {
   const candidates = useMemo(() => STAGE_FIGURES[stageName] || [], [stageName]);
   const [ok, setOk] = useState({});
   const [bad, setBad] = useState({});
+  const cacheKey = useMemo(() => String(Date.now()), [stageName]);
 
   useEffect(() => {
     setOk({});
@@ -221,7 +225,7 @@ function StageFiguresCard({ stageName }) {
         ok[img.id] || bad[img.id] ? null : (
           <BoxProbe
             key={`probe-${img.id}`}
-            src={figureUrl(img.path)}
+            src={figureUrl(img.path, cacheKey)}
             onOk={() => setOk((prev) => ({ ...prev, [img.id]: true }))}
             onBad={() => setBad((prev) => ({ ...prev, [img.id]: true }))}
           />
@@ -241,7 +245,7 @@ function StageFiguresCard({ stageName }) {
                 </MDTypography>
                 <MDBox
                   component="img"
-                  src={figureUrl(img.path)}
+                  src={figureUrl(img.path, cacheKey)}
                   alt={img.title}
                   sx={{
                     width: "100%",

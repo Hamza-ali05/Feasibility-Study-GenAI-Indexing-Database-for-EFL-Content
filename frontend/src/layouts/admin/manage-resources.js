@@ -66,7 +66,8 @@ const TOPIC_OPTIONS = TOPIC_DOMAINS.map((value) => ({
 const selectMenuProps = {
   PaperProps: {
     sx: {
-      maxHeight: 280,
+      minWidth: 280,
+      maxHeight: 320,
       overflowY: "auto",
     },
   },
@@ -75,7 +76,13 @@ const selectMenuProps = {
 };
 
 const selectSx = {
+  minWidth: 260,
   "& .MuiSelect-select": {
+    minHeight: "2.75rem",
+    display: "flex",
+    alignItems: "center",
+    py: 1.25,
+    px: 2,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
@@ -163,7 +170,7 @@ function EditLabelsDialog({ open, item, onClose, onSaved }) {
   };
 
   return (
-    <Dialog open={open} onClose={() => !saving && onClose()} fullWidth maxWidth="xs">
+    <Dialog open={open} onClose={() => !saving && onClose()} fullWidth maxWidth="sm">
       <DialogTitle>Edit skill / topic</DialogTitle>
       <DialogContent>
         <DialogContentText sx={{ mb: 2 }}>
@@ -372,7 +379,7 @@ function ManageResources() {
       <MDBox py={3}>
         <Card sx={{ p: 2, mb: 3 }}>
           <Grid container spacing={2} alignItems="flex-end">
-            <Grid item xs={12} sm={4} md={3}>
+            <Grid item xs={12} sm={6} md={4}>
               <MDTypography
                 variant="caption"
                 fontWeight="medium"
@@ -407,7 +414,7 @@ function ManageResources() {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={4} md={3}>
+            <Grid item xs={12} sm={6} md={4}>
               <MDTypography
                 variant="caption"
                 fontWeight="medium"
@@ -442,7 +449,7 @@ function ManageResources() {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={4} md={3}>
+            <Grid item xs={12} sm={6} md={4}>
               <MDTypography
                 variant="caption"
                 fontWeight="medium"

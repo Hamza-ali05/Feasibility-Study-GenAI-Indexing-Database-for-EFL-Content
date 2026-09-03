@@ -52,25 +52,33 @@ ChartJS.register(
 );
 
 function DefaultLineChart({ icon, title, description, height, chart }) {
-  const chartDatasets = chart.datasets
-    ? chart.datasets.map((dataset) => ({
-        ...dataset,
-        tension: 0,
-        pointRadius: 3,
-        borderWidth: 4,
-        backgroundColor: "transparent",
-        fill: true,
-        pointBackgroundColor: colors[dataset.color]
-          ? colors[dataset.color || "dark"].main
-          : colors.dark.main,
-        borderColor: colors[dataset.color]
-          ? colors[dataset.color || "dark"].main
-          : colors.dark.main,
-        maxBarThickness: 6,
-      }))
-    : [];
+  const chartNode = useMemo(() => {
+    const chartDatasets = chart.datasets
+      ? chart.datasets.map((dataset) => ({
+          ...dataset,
+          tension: 0,
+          pointRadius: 3,
+          borderWidth: 4,
+          backgroundColor: "transparent",
+          fill: true,
+          pointBackgroundColor: colors[dataset.color]
+            ? colors[dataset.color || "dark"].main
+            : colors.dark.main,
+          borderColor: colors[dataset.color]
+            ? colors[dataset.color || "dark"].main
+            : colors.dark.main,
+          maxBarThickness: 6,
+        }))
+      : [];
 
-  const { data, options } = configs(chart.labels || [], chartDatasets);
+    const { data, options } = configs(chart.labels || [], chartDatasets);
+
+    return (
+      <MDBox height={height}>
+        <Line data={data} options={options} redraw />
+      </MDBox>
+    );
+  }, [chart, height]);
 
   const renderChart = (
     <MDBox py={2} pr={2} pl={icon.component ? 1 : 2}>
@@ -104,14 +112,7 @@ function DefaultLineChart({ icon, title, description, height, chart }) {
           </MDBox>
         </MDBox>
       ) : null}
-      {useMemo(
-        () => (
-          <MDBox height={height}>
-            <Line data={data} options={options} redraw />
-          </MDBox>
-        ),
-        [chart, height]
-      )}
+      {chartNode}
     </MDBox>
   );
 

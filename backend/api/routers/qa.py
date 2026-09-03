@@ -31,6 +31,9 @@ class QASource(BaseModel):
     text_snippet: str
     similarity_score: float
     cefr_level: str | None = None
+    skill_type: str | None = None
+    topic_domain: str | None = None
+    source_name: str | None = None
 
 class QAAskResponse(BaseModel):
     answer: str
@@ -107,6 +110,9 @@ async def ask_stream(
             "text_snippet": c["text_snippet"],
             "similarity_score": c["similarity_score"],
             "cefr_level": c.get("cefr_level"),
+            "skill_type": c.get("skill_type"),
+            "topic_domain": c.get("topic_domain"),
+            "source_name": c.get("source_name"),
         }
         for c in contexts
     ]

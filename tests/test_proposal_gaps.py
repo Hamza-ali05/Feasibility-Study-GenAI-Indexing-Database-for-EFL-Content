@@ -50,11 +50,59 @@ def test_extractive_rag_uses_retrieved_sentences():
     )
     assert "boarding" in answer.lower()
     assert "Airport A2" in answer
+    assert "http" not in answer.lower()
+    assert "according to" not in answer.lower()
 
 
 def test_extractive_rag_empty_context():
     answer = extractive_answer("anything", [])
     assert "enough information" in answer.lower()
+
+
+def test_clean_title_strips_gutenberg_url():
+    from backend.services.rag_service import clean_display_title
+
+    title = clean_display_title(
+        'A Tale of the Crimea" http://www.gutenberg.org/files/11058/11058-h/11058-h.htm '
+        "gutenberg 1883 Lit start PD G 1 1"
+    )
+    assert "http" not in title.lower()
+    assert "gutenberg" not in title.lower()
+    assert "Tale of the Crimea" in title
+
+
+def test_extractive_rag_humanizes_culture_story_request():
+    from backend.services.rag_service import extractive_answer
+
+    answer = extractive_answer(
+        "Summarise a beginner-friendly culture story I could use in class.",
+        [
+            {
+                "title": (
+                    'CHRISTOPHER MORLEY" http://www.gutenberg.org/files/38280/38280-h/38280-h.htm '
+                    "gutenberg 1914 Lit mid PD G 1 1"
+                ),
+                "text_snippet": (
+                    "As the boys arrive on the previous evening, they have so much to tell "
+                    "each other, are so full of what they have been doing, that the chatter "
+                    "and laughter are as great as upon the night preceding the breaking-up."
+                ),
+                "cefr_level": "A2",
+                "topic_domain": "Culture",
+                "similarity_score": 0.81,
+            }
+        ],
+    )
+    lower = answer.lower()
+    assert "http" not in lower
+    assert "gutenberg.org" not in lower
+    assert "according to" not in lower
+    assert "class" in lower or "classroom" in lower
+    assert "chatter" in lower or "evening" in lower
+    assert "christopher morley" in lower
+    assert " http" not in lower
+    from backend.services.rag_service import clean_display_title as _title
+    assert _title('CHRISTOPHER MORLEY" http://www.gutenberg.org/files/38280/38280-h/38280-h.htm gu…') == "CHRISTOPHER MORLEY"
 
 
 def test_parse_vtt_captions(tmp_path: Path):

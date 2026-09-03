@@ -382,7 +382,7 @@ function Search() {
           </ClickAwayListener>
 
           <Grid container spacing={2} mt={1} alignItems="flex-end">
-            <Grid item xs={12} sm={4} md={3}>
+            <Grid item xs={12} sm={6} md={4}>
               <MDTypography
                 variant="caption"
                 fontWeight="medium"
@@ -405,7 +405,8 @@ function Search() {
                   MenuProps={{
                     PaperProps: {
                       sx: {
-                        maxHeight: 280,
+                        minWidth: 280,
+                        maxHeight: 320,
                         overflowY: "auto",
                       },
                     },
@@ -413,7 +414,13 @@ function Search() {
                     transformOrigin: { vertical: "top", horizontal: "left" },
                   }}
                   sx={{
+                    minWidth: 260,
                     "& .MuiSelect-select": {
+                      minHeight: "2.75rem",
+                      display: "flex",
+                      alignItems: "center",
+                      py: 1.25,
+                      px: 2,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
@@ -432,7 +439,7 @@ function Search() {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={4} md={3}>
+            <Grid item xs={12} sm={6} md={4}>
               <MDTypography
                 variant="caption"
                 fontWeight="medium"
@@ -455,7 +462,8 @@ function Search() {
                   MenuProps={{
                     PaperProps: {
                       sx: {
-                        maxHeight: 280,
+                        minWidth: 280,
+                        maxHeight: 320,
                         overflowY: "auto",
                       },
                     },
@@ -463,7 +471,13 @@ function Search() {
                     transformOrigin: { vertical: "top", horizontal: "left" },
                   }}
                   sx={{
+                    minWidth: 260,
                     "& .MuiSelect-select": {
+                      minHeight: "2.75rem",
+                      display: "flex",
+                      alignItems: "center",
+                      py: 1.25,
+                      px: 2,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
@@ -482,7 +496,7 @@ function Search() {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={4} md={3}>
+            <Grid item xs={12} sm={6} md={4}>
               <MDTypography
                 variant="caption"
                 fontWeight="medium"
@@ -505,7 +519,8 @@ function Search() {
                   MenuProps={{
                     PaperProps: {
                       sx: {
-                        maxHeight: 280,
+                        minWidth: 280,
+                        maxHeight: 320,
                         overflowY: "auto",
                       },
                     },
@@ -513,7 +528,13 @@ function Search() {
                     transformOrigin: { vertical: "top", horizontal: "left" },
                   }}
                   sx={{
+                    minWidth: 260,
                     "& .MuiSelect-select": {
+                      minHeight: "2.75rem",
+                      display: "flex",
+                      alignItems: "center",
+                      py: 1.25,
+                      px: 2,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
